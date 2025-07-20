@@ -1,0 +1,348 @@
+/* SOS.css */
+.sos-page {
+  min-height: 100vh;
+  background: #f9fafb;
+  padding-bottom: 2rem;
+}
+.sos-alert-section {
+  margin: 1.5rem 1rem 1.5rem 1rem;
+}
+.sos-alert-card {
+  background: #fff0f0;
+  border: 1px solid #fecaca;
+  border-radius: 1rem;
+  padding: 2rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.08);
+}
+.sos-alert-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+.sos-alert-icon {
+  color: #ef4444;
+  margin-right: 1rem;
+}
+.sos-alert-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #b91c1c;
+}
+.sos-alert-desc {
+  font-size: 1rem;
+  color: #b91c1c;
+  margin-top: 0.25rem;
+}
+.sos-activate-btn {
+  width: 100%;
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  font-weight: bold;
+  padding: 1.5rem 0;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.08);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.sos-activate-btn:hover {
+  background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
+  transform: scale(1.03);
+}
+.sos-activate-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+.sos-activate-icon {
+  margin-right: 1rem;
+}
+.sos-activate-label {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+.sos-activate-desc {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+.sos-countdown-section {
+  text-align: center;
+}
+.sos-countdown {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #ef4444;
+  margin-bottom: 1rem;
+}
+.sos-countdown-desc {
+  color: #b91c1c;
+  margin-bottom: 1rem;
+}
+.sos-countdown-big {
+  font-size: 4rem;
+  font-weight: bold;
+  color: #dc2626;
+  text-align: center;
+  margin: 24px 0;
+}
+.sos-cancel-btn {
+  background: #6b7280;
+  color: #fff;
+  font-weight: bold;
+  padding: 0.75rem 2rem;
+  border-radius: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.sos-cancel-btn:hover {
+  background: #374151;
+}
+.sos-contacts-section {
+  margin: 0 1rem 1.5rem 1rem;
+}
+.sos-contacts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.sos-contacts-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+.sos-add-contact-btn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  margin-right: 0.25rem;
+  transition: background 0.2s;
+}
+.sos-add-contact-btn:hover {
+  background: #efeff1;
+  border-radius: 50%;
+  margin-right: 0.25rem;
+}
+.sos-add-contact-icon {
+  color: #3b60c7;
+}
+.sos-contacts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.contact-card {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 1.25rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+}
+
+
+.sos-contact-info {
+  flex: 1;
+}
+.sos-contact-name {
+  font-weight: 600;
+  color: #1f2937;
+}
+.sos-contact-phone {
+  font-size: 1rem;
+  color: #374151;
+  margin-top: 0.25rem;
+}
+.sos-contact-relationship {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+.sos-contact-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.sos-contact-call {
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sos-contact-sms {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.sos-contact-sms:hover {
+  background: #1d4ed8;
+}
+.sos-contact-remove {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.sos-contact-remove:hover {
+  background: #b91c1c;
+}
+.sos-empty-card {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 2rem 1rem;
+  text-align: center;
+}
+.sos-empty-icon {
+  color: #d1d5db;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+.sos-empty-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+.sos-empty-desc {
+  color: #4b5563;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+.sos-features-section {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 1.5rem;
+  margin: 0 1rem 2rem 1rem;
+}
+.sos-features-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+.sos-features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.sos-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.sos-feature-icon {
+  color: #3b82f6;
+  margin-top: 0.25rem;
+}
+.sos-feature-title {
+  font-weight: 500;
+  color: #1f2937;
+}
+.sos-feature-desc {
+  color: #4b5563;
+  font-size: 1rem;
+  margin-top: 0.25rem;
+} 
+.sos-add-contact-form{
+  margin-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: space-evenly;
+}
+.sos-contacts-section{
+   display: flex;
+   flex-direction: column;
+   gap: 1rem;
+}
+.save-contacts{
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  width:150px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 40px;
+}
+
+/* Modal overlay for Add Emergency Contact */
+.sos-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.3);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sos-modal-box {
+  background: #fff;
+  border-radius: 1rem;
+  padding: 2rem;
+  min-width: 300px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sos-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #ef4444;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.sos-modal-close:hover {
+  color: #b91c1c;
+}
+
+.sos-modal-input {
+  margin-bottom: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s;
+}
+.sos-modal-input:focus {
+  border: 1.5px solid #ef4444;
+}
+.sos-press-anim.pressed {
+  transform: scale(0.95);
+  transition: transform 0.1s;
+}

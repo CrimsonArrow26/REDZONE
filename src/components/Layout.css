@@ -1,0 +1,14 @@
+/* Layout.css */
+.layout {
+  min-height: 100vh;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+}
+.layout-main {
+  flex: 1 0 auto;
+  padding-bottom: 4.5rem; /* Space for bottom nav */
+}
+.layout-bottom-nav {
+  flex-shrink: 0;
+} 
