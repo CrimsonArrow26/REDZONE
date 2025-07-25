@@ -1,0 +1,50 @@
+.route-analyzer-page {
+    padding: 1rem;
+    font-family: sans-serif;
+  }
+  
+  .inputs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+  
+  .inputs input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+  }
+  
+  .inputs button {
+    padding: 8px 16px;
+    background-color: #333;
+    color: white;
+    border: none;
+  }
+  
+  .risk-level {
+    margin-top: 1rem;
+    padding: 10px;
+    font-weight: bold;
+    border-radius: 4px;
+  }
+  
+  .risk-low {
+    background: #d4edda;
+    color: #155724;
+  }
+  
+  .risk-medium {
+    background: #fff3cd;
+    color: #856404;
+  }
+  
+  .risk-high {
+    background: #f8d7da;
+    color: #721c24;
+  }
+  
+  .map-container {
+    margin-top: 1rem;
+  }
+  

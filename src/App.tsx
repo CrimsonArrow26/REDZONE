@@ -18,6 +18,7 @@ import UserProfile from './pages/UserProfile';
 import './App.css';
 import { ZoneProvider } from './context/ZoneContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import RouteAnalyzer from './pages/RouteAnalyzer';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/community" element={<Community />} />
             <Route path="/redzones" element={<RedZones />} />
+            <Route path="/route-analyzer" element={<RouteAnalyzer />} />
             <Route path="/emergency" element={<Emergency />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/sos" element={<SOS />} />

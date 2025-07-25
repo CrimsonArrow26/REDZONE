@@ -101,4 +101,15 @@
   margin-right: 0.5rem;
   font-size: 1.25rem;
   line-height: 1.5;
-} 
+}
+.geo-alert-banner {
+  background-color: #ffefef;
+  color: #b40000;
+  border: 1px solid #ff4d4d;
+  padding: 12px;
+  margin: 16px auto;
+  width: 90%;
+  border-radius: 8px;
+  font-weight: bold;
+  text-align: center;
+}

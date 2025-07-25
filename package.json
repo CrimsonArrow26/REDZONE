@@ -12,7 +12,9 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.52.0",
     "axios": "^1.10.0",
+    "ldrs": "^1.1.7",
     "leaflet": "^1.9.4",
+    "leaflet-routing-machine": "^3.2.12",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
