@@ -3,6 +3,7 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    "./sign/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {

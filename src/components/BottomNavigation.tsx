@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Home, FileText, Calendar, AlertTriangle, Users } from 'lucide-react';
 import './BottomNavigation.css';
 
-const navItems = [
+export const navItems = [
   { path: '/home', icon: Home, label: 'Home' },
   { path: '/news', icon: FileText, label: 'News' },
   { path: '/events', icon: Calendar, label: 'Events' },
@@ -14,7 +14,7 @@ const navItems = [
 const BottomNavigation: React.FC = () => {
   const location = useLocation();
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav md:hidden">
       <div className="bottom-nav-inner">
         {navItems.map((item) => {
           const Icon = item.icon;

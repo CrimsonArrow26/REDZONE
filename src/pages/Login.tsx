@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { supabase } from '../supabaseClient';
 
+// DEPRECATED: This file is no longer used for routing.
+// The app now uses AuthPage from sign/components/AuthPage.tsx
+// Original authentication logic is preserved below for reference.
+
+/*
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,3 +91,14 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+*/
+
+// DEPRECATED: Using AuthPage wrapper instead
+import { LoginForm } from '../../sign/components/LoginForm';
+
+const LoginWrapper: React.FC = () => {
+  const [showPassword, setShowPassword] = React.useState(false);
+  return <LoginForm showPassword={showPassword} onTogglePassword={() => setShowPassword((v) => !v)} />;
+};
+
+export default LoginWrapper;

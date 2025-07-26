@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import './Register.css';
 import { supabase } from '../supabaseClient';
 
+// DEPRECATED: This file is no longer used for routing.
+// The app now uses AuthPage from sign/components/AuthPage.tsx
+// Original authentication logic is preserved below for reference.
+
+/*
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -126,3 +131,22 @@ const Register: React.FC = () => {
 };
 
 export default Register;
+*/
+
+// DEPRECATED: Using AuthPage wrapper instead
+import { SignupForm } from '../../sign/components/SignupForm';
+
+const SignupWrapper: React.FC = () => {
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  return (
+    <SignupForm
+      showPassword={showPassword}
+      showConfirmPassword={showConfirmPassword}
+      onTogglePassword={() => setShowPassword((v) => !v)}
+      onToggleConfirmPassword={() => setShowConfirmPassword((v) => !v)}
+    />
+  );
+};
+
+export default SignupWrapper;

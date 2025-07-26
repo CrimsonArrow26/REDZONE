@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Register from './pages/Register';
-import Login from './pages/Login';
+import { AuthPage } from '../sign/components/AuthPage';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import News from './pages/News';
@@ -26,8 +25,10 @@ function App() {
     <ZoneProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Register />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<AuthPage />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/register" element={<AuthPage />} />
+          <Route path="/home" element={<Home />} />
           <Route
             element={
               <ProtectedRoute>
@@ -35,7 +36,6 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/home" element={<Home />} />
             <Route path="/news" element={<News />} />
             <Route path="/events" element={<Events />} />
             <Route path="/alerts" element={<Alerts />} />

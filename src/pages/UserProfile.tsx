@@ -6,18 +6,6 @@ import { supabase } from '../supabaseClient';
 import { useZone } from '../context/ZoneContext';
 import Header from '../components/Header';
 
-interface UserProfileData {
-  id: number;
-  username: string;
-  email: string;
-  phone: string;
-  // Add these if you want more:
-  // location?: string;
-  // incidentsReported?: number;
-  // activeAlerts?: number;
-  // zoneStatus?: string;
-}
-
 const UserProfile: React.FC = () => {
   const location = useLocation();
   const userId = location.state?.userId || localStorage.getItem('user_id');
@@ -49,78 +37,79 @@ const UserProfile: React.FC = () => {
   if (error) return <p className="error">{error}</p>;
   if (!profile) return <p>Loading...</p>;
 
-  // Placeholder data for stats (replace with real data from your DB)
   const incidentsReported = 7;
   const activeAlerts = 3;
 
   return (
-    <div className="profile-page">
-      <div className="profile-header-bar">
-        <Header title="Profile" showBack={true} />
+    <>
+      {/* HEADER OUTSIDE profile-page */}
+      <Header title="Profile" showBack={true} />
+
+      <div className="profile-page">
+        {/* User Info */}
+        <section className="profile-user-section">
+          <div className="profile-avatar">
+            <User size={48} />
+          </div>
+          <div className="profile-details">
+            <h3 className="profile-name">{profile.username}</h3>
+            <p className="profile-email">
+              <Mail size={16} /> {profile.email}
+            </p>
+            <p className="profile-phone">
+              <Phone size={16} /> {profile.phone}
+            </p>
+            <p className="profile-location">
+              <MapPin size={16} /> Pune, India
+            </p>
+          </div>
+        </section>
+
+        {/* Quick Stats */}
+        <section className="profile-stats">
+          <div className="stat-box">
+            <AlertCircle size={20} />
+            <div>
+              <span className="stat-value">{incidentsReported}</span><br />
+              <span className="stat-label">Incidents Reported</span>
+            </div>
+          </div>
+          <div className="stat-box">
+            <Bell size={20} />
+            <div>
+              <span className="stat-value">{activeAlerts}</span><br />
+              <span className="stat-label">Active Alerts</span>
+            </div>
+          </div>
+          <div className="stat-box">
+            <Shield size={20} />
+            <div>
+              <span className="stat-value">
+                {isSafe ? 'Safe Zone' : `${currentZone?.name} (${(currentZone?.risk_level || '').toUpperCase()} ZONE)`}
+              </span><br />
+              <span className="stat-label">Current Zone</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Settings & Actions */}
+        <section className="profile-actions">
+          <button className="profile-btn">
+            <Settings size={18} /> Account Settings
+          </button>
+
+          <button className="profile-btn">
+            <Bell size={18} /> Notification Preferences
+          </button>
+          <button className="profile-btn">
+            <Shield size={18} /> Privacy & Safety
+          </button>
+          <button className="profile-btn danger" onClick={handleLogout}>
+            <LogOut size={18} /> Log Out
+          </button>
+        </section>
       </div>
-      {/* User Info */}
-      <section className="profile-user-section">
-        <div className="profile-avatar">
-          <User size={48} />
-        </div>
-        <div className="profile-details">
-          <h3 className="profile-name">{profile.username}</h3>
-          <p className="profile-email">
-            <Mail size={16} /> {profile.email}
-          </p>
-          <p className="profile-phone">
-            <Phone size={16} /> {profile.phone}
-          </p>
-          <p className="profile-location">
-            <MapPin size={16} /> Pune, India
-          </p>
-        </div>
-      </section>
-
-      {/* Quick Stats */}
-      <section className="profile-stats">
-        <div className="stat-box">
-          <AlertCircle size={20} />
-          <div>
-            <span className="stat-value">{incidentsReported}</span><br></br>
-            <span className="stat-label">Incidents Reported</span>
-          </div>
-        </div>
-        <div className="stat-box">
-          <Bell size={20} />
-          <div>
-            <span className="stat-value">{activeAlerts}</span><br></br>
-            <span className="stat-label">Active Alerts</span>
-          </div>
-        </div>
-        <div className="stat-box">
-          <Shield size={20} />
-          <div>
-            <span className="stat-value">
-              {isSafe ? 'Safe Zone' : `${currentZone?.name} (${(currentZone?.risk_level || '').toUpperCase()} ZONE)`}
-            </span><br />
-            <span className="stat-label">Current Zone</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Settings & Actions */}
-      <section className="profile-actions">
-        <button className="profile-btn">
-          <Settings size={18} /> Account Settings
-        </button>
-        
-        <button className="profile-btn">
-          <Bell size={18} /> Notification Preferences
-        </button>
-        <button className="profile-btn">
-          <Shield size={18} /> Privacy & Safety
-        </button>
-        <button className="profile-btn danger" onClick={handleLogout}>
-          <LogOut size={18} /> Log Out
-        </button>
-      </section>
-    </div>
+    </>
   );
 };
 

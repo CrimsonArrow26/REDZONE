@@ -1,8 +1,26 @@
+/* Header CSS (import in Header component's CSS file ideally) */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 60px; /* adjust if needed */
+  background-color: #102c59;
+  color: white;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
 /* Main profile container */
 .profile-page {
+  padding-top: 60px; /* space for fixed header */
   max-width: 400px;
-  margin: 0px auto 40px auto;
-  padding: 0px 20px 40px 20px;
+  margin: 0 auto 40px auto;
+  padding-left: 20px;
+  padding-right: 20px;
   background: #fff;
   box-shadow: 0 4px 15px rgba(0,0,0,0.10);
   font-family: 'Segoe UI', Arial, sans-serif;
@@ -10,17 +28,6 @@
   box-sizing: border-box;
   min-height: 100vh;
 }
-
-.profile-header-bar {
-  width: 100vw;
-  position: relative;
-  top: 0;
-  left: 0;
-  z-index: 10;
-  margin-left: -20px; /* adjust if your profile-page has padding */
-  margin-right: -20px;
-}
-
 
 /* User Info Section */
 .profile-user-section {
@@ -133,7 +140,7 @@
 @media (max-width: 440px) {
   .profile-page {
     max-width: 110vw;
-    margin: 0px 0px 40px 0px;
+    margin: 0 0 40px 0;
   }
   .profile-user-section {
     padding: 12px 8px;
@@ -144,5 +151,57 @@
   }
   .stat-label {
     font-size: 11px;
+  }
+}
+
+
+/* Desktop styles for min-width: 640px */
+@media (min-width: 640px) {
+  .profile-page {
+    max-width: 600px;
+    margin: 40px auto 60px auto;
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+
+  .profile-user-section {
+    gap: 18px;
+    padding: 18px 25px;
+  }
+
+  .profile-details h3 {
+    font-size: 24px;
+  }
+
+  .profile-details p {
+    font-size: 17px;
+  }
+
+  .profile-stats {
+    gap: 20px;
+  }
+
+  .stat-box {
+    padding: 18px 14px;
+  }
+
+  .stat-value {
+    font-size: 26px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+  }
+
+  .profile-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+
+  .profile-btn {
+    flex: 1 1 calc(50% - 18px);
+    font-size: 17px;
+    padding: 15px 22px;
   }
 }
