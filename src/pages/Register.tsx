@@ -4,7 +4,6 @@ import './Register.css';
 import { supabase } from '../supabaseClient';
 
 const Register: React.FC = () => {
-    
   const [formData, setFormData] = useState({
     username: '',
     phone: '',
@@ -36,15 +35,31 @@ const Register: React.FC = () => {
     if (error) {
       setError(error.message);
     } else if (data.user) {
-      // Insert into app_users table
-      await supabase.from('app_users').insert([{
+      const { error: insertError } = await supabase.from('app_users').insert([{
         id: data.user.id,
         email: formData.email,
         username: formData.username,
         phone: formData.phone
       }]);
-      navigate('/login');
+
+      if (insertError) {
+        setError('Registration succeeded, but failed to save user details.');
+      } else {
+        navigate('/login');
+      }
     }
+  };
+
+  const handleGoogleAuth = async () => {
+    setError('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google'
+    });
+
+    if (error) {
+      setError(error.message);
+    }
+    // No redirect needed here, Supabase handles it externally
   };
 
   return (
@@ -62,7 +77,8 @@ const Register: React.FC = () => {
           onChange={handleChange}
           required
         />
-          <input 
+
+        <input 
           name="phone"
           type="tel"
           placeholder="Phone Number"
@@ -70,7 +86,6 @@ const Register: React.FC = () => {
           onChange={handleChange}
           required
         />
-
 
         <input
           name="email"
@@ -91,6 +106,16 @@ const Register: React.FC = () => {
         />
 
         <button type="submit">Register</button>
+
+        <div className="oauth-divider">or</div>
+
+        <button
+          type="button"
+          onClick={handleGoogleAuth}
+          className="google-auth-button"
+        >
+          Continue with Google
+        </button>
 
         <p className="register-footer">
           Already have an account? <a href="/login">Login</a>

@@ -19,6 +19,7 @@ import './App.css';
 import { ZoneProvider } from './context/ZoneContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouteAnalyzer from './pages/RouteAnalyzer';
+import AuthCallback from './pages/AuthCallback';
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
             <Route path="/report" element={<ReportIncident />} />
             <Route path="/notification" element={<Notification />} />
             <Route path="/profile" element={<UserProfile />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
           </Route>
         </Routes>
       </Router>

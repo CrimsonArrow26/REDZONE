@@ -19,7 +19,7 @@ const Login: React.FC = () => {
     });
 
     if (data.user) {
-      // Upsert into app_users table
+      // Upsert user to app_users table
       await supabase.from('app_users').upsert([{
         id: data.user.id,
         email: data.user.email,
@@ -29,6 +29,20 @@ const Login: React.FC = () => {
       navigate('/home');
     } else {
       setError(error?.message || 'Invalid login credentials');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/auth/callback' // You'll handle this route
+      }
+    });
+
+    if (error) {
+      console.error('Google Auth Error:', error.message);
+      setError('Google login failed.');
     }
   };
 
@@ -56,6 +70,12 @@ const Login: React.FC = () => {
         />
 
         <button type="submit">Login</button>
+
+        <div className="login-divider">or</div>
+
+        <button type="button" className="google-btn" onClick={handleGoogleLogin}>
+          Continue with Google
+        </button>
 
         <p className="login-footer">
           Don't have an account? <a href="/">Register</a>
