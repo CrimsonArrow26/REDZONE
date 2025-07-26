@@ -1,49 +1,24 @@
-// src/pages/RouteAnalyzer.tsx
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet-routing-machine';
 import 'leaflet/dist/leaflet.css';
 import './RouteAnalyzer.css';
 import { createClient } from '@supabase/supabase-js';
+import Header from '../components/Header';
+import RouteMap from './RouteMap';
 
 const supabase = createClient('https://shqfvfjsxtdeknqncjfa.supabase.co', 'your_supabase_key');
 
-const RouteMap = ({ waypoints, redZones }) => {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map || waypoints.length < 2) return;
-
-    const control = L.Routing.control({
-      waypoints,
-      routeWhileDragging: false,
-      show: false,
-    }).addTo(map);
-
-    redZones.forEach(zone => {
-      const marker = L.circleMarker([zone.latitude, zone.longitude], {
-        color: 'red',
-        radius: 6,
-      }).addTo(map);
-      marker.bindPopup(zone.name || 'Red Zone');
-    });
-
-    return () => map.removeControl(control);
-  }, [map, waypoints, redZones]);
-
-  return null;
-};
-
 const RouteAnalyzer = () => {
-  const [source, setSource] = useState('');
-  const [destination, setDestination] = useState('');
-  const [waypoints, setWaypoints] = useState([]);
-  const [redZones, setRedZones] = useState([]);
-  const [riskLevel, setRiskLevel] = useState('');
+  const [source, setSource] = useState<string>('');
+  const [destination, setDestination] = useState<string>('');
+  const [waypoints, setWaypoints] = useState<L.LatLng[]>([]);
+  const [redZones, setRedZones] = useState<any[]>([]);
+  const [riskLevel, setRiskLevel] = useState<string>('');
+  const [routeCoords, setRouteCoords] = useState<{ lat: number; lng: number }[]>([]);
 
-  const geocode = async (place) => {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}`);
+  const geocode = async (place: string): Promise<L.LatLng | null> => {
+    const res = await fetch(`/nominatim/search?format=json&q=${encodeURIComponent(place)}`);
     const data = await res.json();
     if (data[0]) {
       return L.latLng(data[0].lat, data[0].lon);
@@ -51,20 +26,7 @@ const RouteAnalyzer = () => {
     return null;
   };
 
-  const calculateRisk = (routeCoords, redZones) => {
-    let count = 0;
-    redZones.forEach(zone => {
-      routeCoords.forEach(coord => {
-        const dist = mapDistance(coord.lat, coord.lng, zone.latitude, zone.longitude);
-        if (dist < 0.5) count++; // 0.5 km
-      });
-    });
-    if (count === 0) return 'Low';
-    if (count <= 3) return 'Medium';
-    return 'High';
-  };
-
-  const mapDistance = (lat1, lon1, lat2, lon2) => {
+  const mapDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // Earth radius in km
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -75,6 +37,19 @@ const RouteAnalyzer = () => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
+  const calculateRisk = (routeCoords: { lat: number; lng: number }[], redZones: { lat: number; lng: number }[]) => {
+    let count = 0;
+    redZones.forEach(zone => {
+      routeCoords.forEach(coord => {
+        const dist = mapDistance(coord.lat, coord.lng, zone.lat, zone.lng);
+        if (dist < 0.5) count++; // 0.5 km
+      });
+    });
+    if (count === 0) return 'Low';
+    if (count <= 3) return 'Medium';
+    return 'High';
+  };
+
   const handleAnalyze = async () => {
     const src = await geocode(source);
     const dest = await geocode(destination);
@@ -83,37 +58,51 @@ const RouteAnalyzer = () => {
 
       const { data } = await supabase.from('red_zones').select('*');
       setRedZones(data || []);
-
-      // Wait briefly then analyze risk
-      setTimeout(() => {
-        const latlngs = [src, dest]; // In real usage you'd interpolate points
-        const level = calculateRisk(latlngs, data || []);
-        setRiskLevel(level);
-      }, 1000);
+    } else {
+      setRiskLevel('');
+      alert('Could not geocode one or both locations. Please check your input.');
     }
   };
 
+  useEffect(() => {
+    if (routeCoords.length === 0 || redZones.length === 0) return;
+
+    // Normalize red zone structure
+    const zones = redZones.map(zone =>
+      zone.latitude && zone.longitude
+        ? { lat: zone.latitude, lng: zone.longitude }
+        : { lat: zone.coordinates[0], lng: zone.coordinates[1] }
+    );
+
+    const level = calculateRisk(routeCoords, zones);
+    setRiskLevel(level);
+  }, [routeCoords, redZones]);
+
   return (
     <div className="route-analyzer-page">
-      <h2>Route Risk Analyzer</h2>
-      <div className="inputs">
-        <input value={source} onChange={e => setSource(e.target.value)} placeholder="Enter Source Location" />
-        <input value={destination} onChange={e => setDestination(e.target.value)} placeholder="Enter Destination" />
-        <button onClick={handleAnalyze}>Analyze</button>
+      <div className="route-analyzer-header-wrapper">
+        <Header title="Route Risk Analyzer" />
       </div>
-
-      <div className="map-container">
-        <MapContainer center={[18.5204, 73.8567]} zoom={13} style={{ height: '400px', width: '100%' }}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <RouteMap waypoints={waypoints} redZones={redZones} />
-        </MapContainer>
-      </div>
-
-      {riskLevel && (
-        <div className={`risk-level risk-${riskLevel.toLowerCase()}`}>
-          Risk Level: {riskLevel}
+      <div className="route-analyzer-main-content">
+        <div className="inputs route-analyzer-inputs">
+          <input className="route-analyzer-input" value={source} onChange={e => setSource(e.target.value)} placeholder="Enter Source Location" />
+          <input className="route-analyzer-input" value={destination} onChange={e => setDestination(e.target.value)} placeholder="Enter Destination" />
+          <button className="analyze" onClick={handleAnalyze}>Analyze</button>
         </div>
-      )}
+
+        <div className="route-analyzer-map-container">
+          <MapContainer center={[18.5204, 73.8567]} zoom={13} style={{ height: '400px', width: '100%' }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <RouteMap waypoints={waypoints} redZones={redZones} onRouteFound={setRouteCoords} />
+          </MapContainer>
+        </div>
+
+        {riskLevel && (
+          <div className={`risk-level risk-${riskLevel.toLowerCase()} route-analyzer-risk-level`}>
+            Risk Level: {riskLevel}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

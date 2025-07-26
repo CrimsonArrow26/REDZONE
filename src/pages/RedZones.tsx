@@ -6,7 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import './RedZones.css';
 import L from 'leaflet';
 import { Marker, Popup, Circle } from 'react-leaflet';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 
 // Your Supabase project URL and anon key
@@ -42,6 +42,7 @@ const RedZones: React.FC = () => {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [inZone, setInZone] = useState<RedZone | null>(null);
   const [hasNotified, setHasNotified] = useState(false);
+  const navigate = useNavigate();
 
   // Haversine distance in meters
   function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -388,6 +389,12 @@ const RedZones: React.FC = () => {
         </div>
       </div>
 
+      <button className="analyzer"
+        onClick={() => navigate('/route-analyzer')}
+      >
+        Route Analyzer
+      </button>
+
       {/* Legend */}
       <div className="redzones-legend-section">
         <div className="redzones-legend-card">
@@ -461,6 +468,8 @@ const RedZones: React.FC = () => {
           </div>
         )}
       </div>
+
+
     </div>
   );
 };

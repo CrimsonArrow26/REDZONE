@@ -69,14 +69,6 @@ const Home: React.FC = () => {
           className="feature-card blue"
         />
 
-        {/* New Feature: Route Risk Analyzer */}
-        <FeatureCard
-          title="Route Risk Analyzer"
-          icon={Map}
-          to="/route-analyzer"
-          state={{ fromHome: true }}
-          className="feature-card orange"
-        />
       </div>
 
       {/* Safety Tips */}

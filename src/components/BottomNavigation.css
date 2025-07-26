@@ -21,11 +21,12 @@
   transition: color 0.2s;
   text-decoration: none;
 }
+/* Remove color from parent link classes */
 .bottom-nav-link-active {
-  color: #fff;
+  /* color: #fff; */
 }
 .bottom-nav-link-inactive {
-  color: #9ca3af;
+  /* color: #9ca3af; */
 }
 .bottom-nav-link-inactive:hover {
   color: #fff;
@@ -38,4 +39,11 @@
   font-size: 0.85rem;
   font-weight: 500;
   margin-top: 0.1rem;
+}
+/* Explicit label color for active/inactive */
+.bottom-nav-link-active .bottom-nav-label {
+  color: #fff !important;
+}
+.bottom-nav-link-inactive .bottom-nav-label {
+  color: #9ca3af !important;
 } 
