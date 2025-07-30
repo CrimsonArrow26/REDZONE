@@ -1,56 +1,79 @@
-// src/utils/geocoding.ts
+/**
+ * utils/geocoding.ts
+ * Robust Nominatim geocoder with Pune fallback.
+ */
 
-export const geocodeAddress = async (
-  address: string
-): Promise<{ lat: number; lng: number } | null> => {
+import L from 'leaflet';
+
+export interface GeocodeResult {
+  lat: string;
+  lon: string;
+  display_name: string;
+  [key: string]: any;
+}
+
+/**
+ * Always returns an array. If no results, returns [].
+ */
+export const geocodeAddress = async (address: string): Promise<GeocodeResult[]> => {
+  // ✅ Add fallback: always include Pune if not mentioned
+  const safeAddress = address.toLowerCase().includes('pune') ? address : `${address} Pune`;
+
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+    safeAddress
+  )}&addressdetails=1&limit=5`;
+
   try {
-    const isDev = import.meta.env.DEV;
-    const baseUrl = isDev
-      ? 'http://localhost:5000'
-      : 'https://redzone-y2yb.onrender.com';
-
-    const url = `${baseUrl}/api/geocode?q=${encodeURIComponent(address)}`;
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`Geocoding failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // 🛡️ Ensure it's an array
-    if (!Array.isArray(data)) {
-      console.error('Expected array in geocoding response but got:', data);
-      return null;
-    }
-
-    if (data.length === 0) {
-      console.warn('Geocoding returned no results for:', address);
-      return null;
-    }
-
-    // 📍 Sort by proximity to Pune (optional)
-    const reference = { lat: 18.5204, lon: 73.8567 };
-    const sorted = data.sort((a, b) => {
-      const distA =
-        Math.pow(parseFloat(a.lat) - reference.lat, 2) +
-        Math.pow(parseFloat(a.lon) - reference.lon, 2);
-      const distB =
-        Math.pow(parseFloat(b.lat) - reference.lat, 2) +
-        Math.pow(parseFloat(b.lon) - reference.lon, 2);
-      return distA - distB;
+    const response = await fetch(url, {
+      headers: {
+        'Accept-Language': 'en',
+      },
     });
 
-    const top = sorted[0];
-    return top
-      ? {
-          lat: parseFloat(top.lat),
-          lng: parseFloat(top.lon),
-        }
-      : null;
+    if (!response.ok) {
+      console.error('Nominatim request failed:', response.status, response.statusText);
+      return [];
+    }
+
+    const results = await response.json();
+
+    if (!Array.isArray(results)) {
+      console.error('Nominatim did not return an array:', results);
+      return [];
+    }
+
+    if (results.length === 0) {
+      console.warn('Geocoding returned no results for:', safeAddress);
+      return [];
+    }
+
+    return results;
   } catch (error) {
-    console.error('Geocoding error:', error);
+    console.error('Geocoding failed:', error);
+    return [];
+  }
+};
+
+/**
+ * Picks the closest result to Pune.
+ * Returns null if none.
+ */
+export const geocodeClosestMatch = async (address: string): Promise<L.LatLng | null> => {
+  const reference = { lat: 18.5204, lon: 73.8567 };
+
+  const results = await geocodeAddress(address);
+
+  if (results.length === 0) {
+    console.warn('No valid geocoding results for:', address);
     return null;
   }
+
+  results.sort((a, b) => {
+    const distA = Math.hypot(Number(a.lat) - reference.lat, Number(a.lon) - reference.lon);
+    const distB = Math.hypot(Number(b.lat) - reference.lat, Number(b.lon) - reference.lon);
+    return distA - distB;
+  });
+
+  const best = results[0];
+  return L.latLng(Number(best.lat), Number(best.lon));
 };

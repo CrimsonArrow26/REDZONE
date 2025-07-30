@@ -6,7 +6,7 @@ import './RouteAnalyzer.css';
 import { createClient } from '@supabase/supabase-js';
 import Header from '../components/Header';
 import RouteMap from './RouteMap';
-import { geocodeAddress } from '../utils/geocoding';
+import { geocodeClosestMatch } from '../utils/geocoding'; // ✅ FIXED — use new version!
 
 const supabase = createClient(
   'https://shqfvfjsxtdeknqncjfa.supabase.co',
@@ -34,28 +34,6 @@ const RouteAnalyzer = () => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
-  const geocodeClosestMatch = async (place: string): Promise<L.LatLng | null> => {
-    const referenceLat = 18.5204;
-    const referenceLng = 73.8567;
-
-    try {
-      const results = await geocodeAddress(place);
-      if (!results) return null;
-
-      results.sort((a: any, b: any) => {
-        const distA = mapDistance(referenceLat, referenceLng, Number(a.lat), Number(a.lon));
-        const distB = mapDistance(referenceLat, referenceLng, Number(b.lat), Number(b.lon));
-        return distA - distB;
-      });
-
-      const closest = results[0];
-      return L.latLng(Number(closest.lat), Number(closest.lon));
-    } catch (error) {
-      console.error('Geocoding error:', error);
-      return null;
-    }
-  };
-
   const calculateRisk = (
     routeCoords: { lat: number; lng: number }[],
     redZones: { lat: number; lng: number }[]
@@ -76,6 +54,7 @@ const RouteAnalyzer = () => {
     setLoading(true);
     setRiskLevel('');
     try {
+      // ✅ USE the improved, imported version
       const src = await geocodeClosestMatch(source);
       const dest = await geocodeClosestMatch(destination);
 
@@ -138,7 +117,11 @@ const RouteAnalyzer = () => {
         </div>
 
         <div className="route-analyzer-map-container">
-          <MapContainer center={[18.5204, 73.8567]} zoom={13} style={{ height: '400px', width: '100%' }}>
+          <MapContainer
+            center={[18.5204, 73.8567]}
+            zoom={13}
+            style={{ height: '400px', width: '100%' }}
+          >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <RouteMap waypoints={waypoints} redZones={redZones} onRouteFound={setRouteCoords} />
           </MapContainer>
