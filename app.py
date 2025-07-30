@@ -19,7 +19,7 @@ app = Flask(__name__)
 
 # Production CORS configuration - update with your actual frontend domain
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://redzoner.netlify.app")
-CORS(app, origins=[FRONTEND_URL, "http://localhost:3000", "http://localhost:5173"])
+CORS(app, origins=["https://redzoner.netlify.app", "http://localhost:3000", "http://localhost:5173"])
 
 # Environment variables with proper fallbacks
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
