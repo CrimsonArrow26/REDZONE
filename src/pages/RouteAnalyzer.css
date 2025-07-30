@@ -54,3 +54,27 @@
 .leaflet-routing-container {
   display: none !important;
 }
+
+.ripple-marker {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 0, 0, 0.4);
+  animation: ripple 1.5s infinite;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
