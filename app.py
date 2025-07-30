@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Production CORS configuration - update with your actual frontend domain
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://redzoner.netlify.app")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://redzoner.netlify.app").rstrip("/")
 CORS(app, origins=["https://redzoner.netlify.app", "http://localhost:3000", "http://localhost:5173"])
 
 # Environment variables with proper fallbacks
@@ -28,6 +28,12 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 if not NEWS_API_KEY:
     logger.error("NEWS_API_KEY environment variable is not set!")
     NEWS_API_KEY = "pub_a48ee6eb1f014b57a406188f05877ea3"  # Fallback for development
+
+@app.before_request
+def log_origin():
+    origin = request.headers.get('Origin')
+    logger.info(f"Origin received: {origin}")
+
 
 @app.route('/api/geocode')
 def geocode():
