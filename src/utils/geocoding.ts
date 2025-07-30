@@ -19,9 +19,9 @@ export const geocodeAddress = async (address: string): Promise<GeocodeResult[]> 
   // ✅ Add fallback: always include Pune if not mentioned
   const safeAddress = address.toLowerCase().includes('pune') ? address : `${address} Pune`;
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-    safeAddress
-  )}&addressdetails=1&limit=5`;
+  const isDev = import.meta.env.DEV;
+  const baseUrl = isDev ? 'http://localhost:5000' : 'https://redzone-y2yb.onrender.com';
+  const url = `${baseUrl}/api/geocode?q=${encodeURIComponent(safeAddress)}`;
 
   try {
     const response = await fetch(url, {
