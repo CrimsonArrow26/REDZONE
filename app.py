@@ -1,27 +1,48 @@
 import os
 import requests
+import logging
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
-CORS(app)
+# Configure logging for production
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
+app = Flask(__name__)
+
+# Production CORS configuration - update with your actual frontend domain
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://your-netlify-site.netlify.app")
+CORS(app, origins=[FRONTEND_URL, "http://localhost:3000", "http://localhost:5173"])
+
+# Environment variables with proper fallbacks
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+
+if not NEWS_API_KEY:
+    logger.error("NEWS_API_KEY environment variable is not set!")
+    NEWS_API_KEY = "pub_a48ee6eb1f014b57a406188f05877ea3"  # Fallback for development
 
 @app.route('/api/news')
 def get_news():
-    api_key = 'pub_a48ee6eb1f014b57a406188f05877ea3'  
-    url = f'https://newsdata.io/api/1/latest?apikey=pub_a48ee6eb1f014b57a406188f05877ea3&q=crime%20in%20pune'
-
+    """Fetch news articles from the news API"""
     try:
-        response = requests.get(url)
+        url = f'https://newsdata.io/api/1/latest?apikey={NEWS_API_KEY}&q=crime%20in%20pune'
+        
+        response = requests.get(url, timeout=10)  # Add timeout for production
+        response.raise_for_status()  # Raise exception for bad status codes
+        
         data = response.json()
 
         # Check if 'results' exists
         if "results" not in data:
+            logger.warning("No results found in news API response")
             return jsonify([])
 
         articles = []
@@ -38,10 +59,51 @@ def get_news():
                 "url": article.get("link")
             })
 
+        logger.info(f"Successfully fetched {len(articles)} news articles")
         return jsonify(articles)
 
+    except requests.exceptions.Timeout:
+        logger.error("News API request timed out")
+        return jsonify({"error": "Request timeout"}), 504
+    except requests.exceptions.RequestException as e:
+        logger.error(f"News API request failed: {str(e)}")
+        return jsonify({"error": "Failed to fetch news"}), 500
     except Exception as e:
-        return jsonify({"error": str(e)})
+        logger.error(f"Unexpected error in get_news: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint for monitoring"""
+    return jsonify({
+        "status": "healthy",
+        "message": "Backend is running",
+        "environment": ENVIRONMENT,
+        "version": "1.0.0"
+    })
+
+@app.route('/api/status')
+def status():
+    """Detailed status endpoint for monitoring"""
+    return jsonify({
+        "status": "operational",
+        "environment": ENVIRONMENT,
+        "api_key_configured": bool(NEWS_API_KEY),
+        "frontend_url": FRONTEND_URL
+    })
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"error": "Endpoint not found"}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"Internal server error: {str(error)}")
+    return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    
+    logger.info(f"Starting Flask app in {ENVIRONMENT} mode on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=debug)

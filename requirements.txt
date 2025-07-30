@@ -1,9 +1,6 @@
-Flask
-Flask_SQLAlchemy
-psycopg2-binary
-Werkzeug
 Flask==2.3.3
 Flask-Cors==4.0.0
-Flask-SQLAlchemy==2.5.1
-SQLAlchemy==1.4.49
+gunicorn==21.2.0
+requests==2.31.0
 python-dotenv==1.0.1
+Werkzeug==3.0.1

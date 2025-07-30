@@ -3,6 +3,7 @@ import { Calendar, MapPin, ExternalLink, TrendingUp, AlertCircle, X } from 'luci
 import Header from '../components/Header';
 import './News.css';
 import { Tailspin } from 'ldrs/react';
+import { getNews } from '../utils/api';
 
 interface NewsItem {
   id: string;
@@ -26,8 +27,7 @@ const News: React.FC = () => {
   const itemsPerPage = 5;
 
   useEffect(() => {
-    fetch('/api/news')
-      .then(res => res.json())
+    getNews()
       .then(data => {
         const articles = data.map((article: any, index: number) => ({
           id: article.id || index.toString(),
@@ -174,7 +174,11 @@ const News: React.FC = () => {
       {selectedArticle && (
         <div className="news-modal">
           <div className="news-modal-content">
-            <button className="news-modal-close" onClick={() => setSelectedArticle(null)}>
+            <button 
+              className="news-modal-close" 
+              onClick={() => setSelectedArticle(null)}
+              aria-label="Close modal"
+            >
               <X size={20} />
             </button>
             <h2>{selectedArticle.title}</h2>
