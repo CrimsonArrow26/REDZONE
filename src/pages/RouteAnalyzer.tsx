@@ -8,7 +8,10 @@ import Header from '../components/Header';
 import RouteMap from './RouteMap';
 import { geocodeAddress } from '../utils/geocoding';
 
-const supabase = createClient('https://shqfvfjsxtdeknqncjfa.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNocWZ2ZmpzeHRkZWtucW5jamZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MDgzNzMsImV4cCI6MjA2ODQ4NDM3M30.enzNuGiPvfMZLUPLPeDPBlMsHBOP9foFOjbGjQhLsnc');
+const supabase = createClient(
+  'https://shqfvfjsxtdeknqncjfa.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNocWZ2ZmpzeHRkZWtucW5jamZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MDgzNzMsImV4cCI6MjA2ODQ4NDM3M30.enzNuGiPvfMZLUPLPeDPBlMsHBOP9foFOjbGjQhLsnc'
+);
 
 const RouteAnalyzer = () => {
   const [source, setSource] = useState<string>('');
@@ -18,31 +21,49 @@ const RouteAnalyzer = () => {
   const [riskLevel, setRiskLevel] = useState<string>('');
   const [routeCoords, setRouteCoords] = useState<{ lat: number; lng: number }[]>([]);
 
-  const geocode = async (place: string): Promise<L.LatLng | null> => {
+  // Haversine distance helper
+  const mapDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  // New geocode function: gets closest match near Pune from geocodeAddress results
+  const geocodeClosestMatch = async (place: string): Promise<L.LatLng | null> => {
+    const referenceLat = 18.5204; // Pune
+    const referenceLng = 73.8567;
+
     try {
-      const result = await geocodeAddress(place);
-      if (result) {
-        return L.latLng(result.lat, result.lng);
-      }
-      return null;
+      // Assume geocodeAddress returns array of results for the place
+      const results = await geocodeAddress(place);
+      if (!results || results.length === 0) return null;
+
+      // Sort by distance to Pune
+      results.sort((a: any, b: any) => {
+        const distA = mapDistance(referenceLat, referenceLng, a.lat, a.lng);
+        const distB = mapDistance(referenceLat, referenceLng, b.lat, b.lng);
+        return distA - distB;
+      });
+
+      const closest = results[0];
+      return L.latLng(closest.lat, closest.lng);
     } catch (error) {
       console.error('Geocoding error:', error);
       return null;
     }
   };
 
-  const mapDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Earth radius in km
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a = Math.sin(dLat / 2) ** 2 +
-              Math.cos(lat1 * Math.PI / 180) *
-              Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  };
-
-  const calculateRisk = (routeCoords: { lat: number; lng: number }[], redZones: { lat: number; lng: number }[]) => {
+  // Risk calculation unchanged
+  const calculateRisk = (
+    routeCoords: { lat: number; lng: number }[],
+    redZones: { lat: number; lng: number }[]
+  ) => {
     let count = 0;
     redZones.forEach(zone => {
       routeCoords.forEach(coord => {
@@ -55,12 +76,13 @@ const RouteAnalyzer = () => {
     return 'High';
   };
 
+  // Use new geocodeClosestMatch here
   const handleAnalyze = async () => {
-    const src = await geocode(source);
-    const dest = await geocode(destination);
+    const src = await geocodeClosestMatch(source);
+    const dest = await geocodeClosestMatch(destination);
+
     if (src && dest) {
       setWaypoints([src, dest]);
-
       const { data } = await supabase.from('red_zones').select('*');
       setRedZones(data || []);
     } else {
@@ -72,7 +94,6 @@ const RouteAnalyzer = () => {
   useEffect(() => {
     if (routeCoords.length === 0 || redZones.length === 0) return;
 
-    // Normalize red zone structure
     const zones = redZones.map(zone =>
       zone.latitude && zone.longitude
         ? { lat: zone.latitude, lng: zone.longitude }
@@ -90,9 +111,31 @@ const RouteAnalyzer = () => {
       </div>
       <div className="route-analyzer-main-content">
         <div className="inputs route-analyzer-inputs">
-          <input className="route-analyzer-input" value={source} onChange={e => setSource(e.target.value)} placeholder="Enter Source Location" />
-          <input className="route-analyzer-input" value={destination} onChange={e => setDestination(e.target.value)} placeholder="Enter Destination" />
-          <button className="analyze" onClick={handleAnalyze}>Analyze</button>
+
+          {/* Input with pin icon styling */}
+          <div className="input-with-icon">
+            <span className="input-icon">📍</span>
+            <input
+              className="route-analyzer-input"
+              value={source}
+              onChange={e => setSource(e.target.value)}
+              placeholder="Enter Source Location"
+            />
+          </div>
+
+          <div className="input-with-icon">
+            <span className="input-icon">📍</span>
+            <input
+              className="route-analyzer-input"
+              value={destination}
+              onChange={e => setDestination(e.target.value)}
+              placeholder="Enter Destination"
+            />
+          </div>
+
+          <button className="analyze" onClick={handleAnalyze}>
+            Analyze
+          </button>
         </div>
 
         <div className="route-analyzer-map-container">
