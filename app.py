@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Production CORS configuration - update with your actual frontend domain
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://your-netlify-site.netlify.app")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://redzoner.netlify.app")
 CORS(app, origins=[FRONTEND_URL, "http://localhost:3000", "http://localhost:5173"])
 
 # Environment variables with proper fallbacks
@@ -28,6 +28,31 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 if not NEWS_API_KEY:
     logger.error("NEWS_API_KEY environment variable is not set!")
     NEWS_API_KEY = "pub_a48ee6eb1f014b57a406188f05877ea3"  # Fallback for development
+
+@app.route('/api/geocode')
+def geocode():
+    """Proxy endpoint for geocoding to avoid CORS issues"""
+    try:
+        query = request.args.get('q')
+        if not query:
+            return jsonify({"error": "Query parameter 'q' is required"}), 400
+        
+        url = f'https://nominatim.openstreetmap.org/search?format=json&q={query}'
+        
+        response = requests.get(url, headers={
+            'User-Agent': 'RouteRiskAnalyzer/1.0 (your-email@example.com)'
+        }, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return jsonify(data)
+        else:
+            logger.error(f"Geocoding API error: {response.status_code}")
+            return jsonify({"error": "Geocoding service unavailable"}), 503
+            
+    except Exception as e:
+        logger.error(f"Geocoding error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/api/news')
 def get_news():

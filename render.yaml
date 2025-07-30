@@ -14,4 +14,4 @@ services:
       - key: NEWS_API_KEY
         value: pub_a48ee6eb1f014b57a406188f05877ea3
       - key: FRONTEND_URL
-        value: https://your-netlify-site.netlify.app
+        value: https://redzoner.netlify.app

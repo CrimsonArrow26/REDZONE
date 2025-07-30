@@ -1,17 +1,12 @@
 // Geocoding utility that works in both development and production
 export const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
   try {
-    // Use direct API call for production, proxy for development
+    // Use backend proxy to avoid CORS issues
     const isDev = import.meta.env.DEV;
-    const url = isDev 
-      ? `/nominatim/search?format=json&q=${encodeURIComponent(address)}`
-      : `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+    const baseUrl = isDev ? 'http://localhost:5000' : 'https://redzone-y2yb.onrender.com';
+    const url = `${baseUrl}/api/geocode?q=${encodeURIComponent(address)}`;
     
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'RouteRiskAnalyzer/1.0 (your-email@example.com)'
-      }
-    });
+    const response = await fetch(url);
     
     if (!response.ok) {
       throw new Error(`Geocoding failed: ${response.status}`);
