@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { navItems } from './BottomNavigation';
-import './Sidebar.css';
+import './sidebar.css';
 
 interface SidebarProps {
   isOpen: boolean;

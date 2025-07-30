@@ -6,6 +6,7 @@ import './RouteAnalyzer.css';
 import { createClient } from '@supabase/supabase-js';
 import Header from '../components/Header';
 import RouteMap from './RouteMap';
+import { geocodeAddress } from '../utils/geocoding';
 
 const supabase = createClient('https://shqfvfjsxtdeknqncjfa.supabase.co', 'your_supabase_key');
 
@@ -18,12 +19,16 @@ const RouteAnalyzer = () => {
   const [routeCoords, setRouteCoords] = useState<{ lat: number; lng: number }[]>([]);
 
   const geocode = async (place: string): Promise<L.LatLng | null> => {
-    const res = await fetch(`/nominatim/search?format=json&q=${encodeURIComponent(place)}`);
-    const data = await res.json();
-    if (data[0]) {
-      return L.latLng(data[0].lat, data[0].lon);
+    try {
+      const result = await geocodeAddress(place);
+      if (result) {
+        return L.latLng(result.lat, result.lng);
+      }
+      return null;
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      return null;
     }
-    return null;
   };
 
   const mapDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
