@@ -14,14 +14,14 @@ const supabase = createClient(
 );
 
 const RouteAnalyzer = () => {
-  const [source, setSource] = useState<string>('');
-  const [destination, setDestination] = useState<string>('');
+  const [source, setSource] = useState('');
+  const [destination, setDestination] = useState('');
   const [waypoints, setWaypoints] = useState<L.LatLng[]>([]);
   const [redZones, setRedZones] = useState<any[]>([]);
-  const [riskLevel, setRiskLevel] = useState<string>('');
+  const [riskLevel, setRiskLevel] = useState('');
   const [routeCoords, setRouteCoords] = useState<{ lat: number; lng: number }[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Haversine distance helper
   const mapDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // km
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -34,32 +34,28 @@ const RouteAnalyzer = () => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
-  // New geocode function: gets closest match near Pune from geocodeAddress results
   const geocodeClosestMatch = async (place: string): Promise<L.LatLng | null> => {
-    const referenceLat = 18.5204; // Pune
+    const referenceLat = 18.5204;
     const referenceLng = 73.8567;
 
     try {
-      // Assume geocodeAddress returns array of results for the place
       const results = await geocodeAddress(place);
-      if (!results || results.length === 0) return null;
+      if (!results) return null;
 
-      // Sort by distance to Pune
       results.sort((a: any, b: any) => {
-        const distA = mapDistance(referenceLat, referenceLng, a.lat, a.lng);
-        const distB = mapDistance(referenceLat, referenceLng, b.lat, b.lng);
+        const distA = mapDistance(referenceLat, referenceLng, Number(a.lat), Number(a.lon));
+        const distB = mapDistance(referenceLat, referenceLng, Number(b.lat), Number(b.lon));
         return distA - distB;
       });
 
       const closest = results[0];
-      return L.latLng(closest.lat, closest.lng);
+      return L.latLng(Number(closest.lat), Number(closest.lon));
     } catch (error) {
       console.error('Geocoding error:', error);
       return null;
     }
   };
 
-  // Risk calculation unchanged
   const calculateRisk = (
     routeCoords: { lat: number; lng: number }[],
     redZones: { lat: number; lng: number }[]
@@ -68,7 +64,7 @@ const RouteAnalyzer = () => {
     redZones.forEach(zone => {
       routeCoords.forEach(coord => {
         const dist = mapDistance(coord.lat, coord.lng, zone.lat, zone.lng);
-        if (dist < 0.5) count++; // 0.5 km
+        if (dist < 0.5) count++;
       });
     });
     if (count === 0) return 'Low';
@@ -76,18 +72,23 @@ const RouteAnalyzer = () => {
     return 'High';
   };
 
-  // Use new geocodeClosestMatch here
   const handleAnalyze = async () => {
-    const src = await geocodeClosestMatch(source);
-    const dest = await geocodeClosestMatch(destination);
+    setLoading(true);
+    setRiskLevel('');
+    try {
+      const src = await geocodeClosestMatch(source);
+      const dest = await geocodeClosestMatch(destination);
 
-    if (src && dest) {
-      setWaypoints([src, dest]);
-      const { data } = await supabase.from('red_zones').select('*');
-      setRedZones(data || []);
-    } else {
-      setRiskLevel('');
-      alert('Could not geocode one or both locations. Please check your input.');
+      if (src && dest) {
+        setWaypoints([src, dest]);
+        const { data, error } = await supabase.from('red_zones').select('*');
+        if (error) console.error(error);
+        setRedZones(data || []);
+      } else {
+        alert('Could not geocode one or both locations. Please check your input.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -111,8 +112,6 @@ const RouteAnalyzer = () => {
       </div>
       <div className="route-analyzer-main-content">
         <div className="inputs route-analyzer-inputs">
-
-          {/* Input with pin icon styling */}
           <div className="input-with-icon">
             <span className="input-icon">📍</span>
             <input
@@ -133,8 +132,8 @@ const RouteAnalyzer = () => {
             />
           </div>
 
-          <button className="analyze" onClick={handleAnalyze}>
-            Analyze
+          <button className="analyze" onClick={handleAnalyze} disabled={loading}>
+            {loading ? 'Analyzing...' : 'Analyze'}
           </button>
         </div>
 

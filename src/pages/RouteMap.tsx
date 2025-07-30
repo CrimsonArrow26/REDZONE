@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
-import './RouteAnalyzer.css'; // Make sure your ripple CSS is imported
+import './RouteAnalyzer.css'; // Ensure ripple CSS is here
 
 // Haversine distance
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -37,11 +37,22 @@ const getRiskLevel = (
 
 const getColor = (risk: 'low' | 'medium' | 'high') => {
   switch (risk) {
-    case 'low': return 'green';
-    case 'medium': return 'orange';
-    case 'high': return 'red';
+    case 'low':
+      return 'green';
+    case 'medium':
+      return 'orange';
+    case 'high':
+      return 'red';
   }
 };
+
+// ✅ Define your custom icon ONCE
+const customIcon = L.icon({
+  iconUrl: '/custom-pin.png', // ✅ Your custom pin in public/
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+});
 
 const RouteMap = ({
   waypoints,
@@ -67,8 +78,9 @@ const RouteMap = ({
       }),
     }).addTo(map);
 
+    // ✅ Use custom marker icon
     control.getPlan().options.createMarker = (i: number, wp: any) => {
-      return L.marker(wp.latLng);
+      return L.marker(wp.latLng, { icon: customIcon });
     };
 
     control.on('routesfound', function (e: any) {
@@ -99,7 +111,7 @@ const RouteMap = ({
             opacity: 0.8,
           }).addTo(map);
 
-          // Add ripple effect for high-risk midpoints
+          // Ripple effect for high risk
           if (risk === 'high') {
             const rippleIcon = L.divIcon({
               className: '',
