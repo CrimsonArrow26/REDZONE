@@ -37,7 +37,8 @@ def geocode():
         if not query:
             return jsonify({"error": "Query parameter 'q' is required"}), 400
         
-        url = f'https://nominatim.openstreetmap.org/search?format=json&q={query}'
+        # Restrict search to India/Pune area
+        url = f'https://nominatim.openstreetmap.org/search?format=json&q={query}&countrycodes=in&limit=5&addressdetails=1'
         
         response = requests.get(url, headers={
             'User-Agent': 'RouteRiskAnalyzer/1.0 (your-email@example.com)'
@@ -45,7 +46,18 @@ def geocode():
         
         if response.status_code == 200:
             data = response.json()
-            return jsonify(data)
+            # Filter to prioritize Pune/Maharashtra results
+            filtered_data = []
+            for item in data:
+                if 'address' in item:
+                    # Prioritize results from Pune/Maharashtra
+                    address = item['address']
+                    if 'Pune' in address.get('city', '') or 'Maharashtra' in address.get('state', ''):
+                        filtered_data.insert(0, item)  # Put Pune results first
+                    else:
+                        filtered_data.append(item)
+            
+            return jsonify(filtered_data if filtered_data else data)
         else:
             logger.error(f"Geocoding API error: {response.status_code}")
             return jsonify({"error": "Geocoding service unavailable"}), 503

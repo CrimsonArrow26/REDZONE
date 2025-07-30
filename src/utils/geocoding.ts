@@ -13,7 +13,8 @@ export const geocodeAddress = async (address: string): Promise<{ lat: number; ln
     }
     
     const data = await response.json();
-    if (data && data[0]) {
+    if (data && data.length > 0) {
+      // Use the first result (prioritized by backend)
       return {
         lat: parseFloat(data[0].lat),
         lng: parseFloat(data[0].lon)
