@@ -3,6 +3,7 @@ import { MapPin, Camera, Send, AlertTriangle } from 'lucide-react';
 import Header from '../components/Header';
 import './ReportIncident.css';
 import { supabase } from '../supabaseClient';
+import { locationStability } from '../utils/locationStability';
 
 const reportCrime = async (description: string, latitude: number, longitude: number) => {
   const { data: redZones, error } = await supabase.from('red_zones').select('*');
@@ -175,10 +176,25 @@ const ReportIncident: React.FC = () => {
   };
 
   const getCurrentLocation = () => {
+    // Try to use stable location first
+    const stableLocation = locationStability.getCurrentStableLocation();
+    
+    if (stableLocation) {
+      console.log('ReportIncident: Using stable location:', stableLocation);
+      setFormData(prev => ({
+        ...prev,
+        latitude: stableLocation.lat.toString(),
+        longitude: stableLocation.lng.toString()
+      }));
+      return;
+    }
+
+    // Fallback to direct GPS if no stable location available
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
+          console.log('ReportIncident: Using direct GPS reading:', latitude, longitude);
           setFormData(prev => ({
             ...prev,
             latitude: latitude.toString(),
@@ -188,6 +204,11 @@ const ReportIncident: React.FC = () => {
         (error) => {
           console.error('Error getting location:', error);
           alert('Unable to get current location. Please enter manually.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 30000 // Allow cached location for report incident
         }
       );
     } else {

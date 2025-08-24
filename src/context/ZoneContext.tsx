@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { locationStability } from '../utils/locationStability';
 
 // Supabase setup
 const supabaseUrl = 'https://shqfvfjsxtdeknqncjfa.supabase.co';
@@ -46,24 +47,42 @@ export const ZoneProvider = ({ children }) => {
     fetchZones();
   }, []);
 
-  // Track user location in real-time
+  // Track user location using stability system
   useEffect(() => {
     if ('geolocation' in navigator) {
+      // Set up location stability callback
+      locationStability.setLocationChangeCallback((stableLocation) => {
+        console.log('ZoneContext: Stable location updated:', stableLocation);
+        setUserLocation({ 
+          lat: stableLocation.lat, 
+          lng: stableLocation.lng 
+        });
+      });
+
+      // Start watching position and feed readings to stability manager
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
+          const { latitude, longitude, accuracy } = pos.coords;
+          console.log(`ZoneContext: Raw GPS reading: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}, accuracy: ${accuracy}m`);
+          
+          // Feed raw reading to stability manager
+          locationStability.addReading(latitude, longitude, accuracy);
         },
         (err) => {
           console.error('Geolocation error:', err);
         },
         {
           enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 10000,
+          timeout: 10000,
+          maximumAge: 5000, // Allow slightly fresher readings
         }
       );
-      return () => navigator.geolocation.clearWatch(watchId);
+
+      return () => {
+        if (navigator.geolocation) {
+          navigator.geolocation.clearWatch(watchId);
+        }
+      };
     }
   }, []);
 
