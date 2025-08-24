@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { MapPin, Phone, FileText, Shield, Bell, User, Menu, X } from 'lucide-react';
 import FeatureCard from '../components/FeatureCard';
+import VoiceControlPanel from '../components/VoiceControlPanel';
+import VoiceNotifications from '../components/VoiceNotifications';
 import { useZone } from '../context/ZoneContext';
 import { navItems } from '../components/BottomNavigation';
 import { NavLink } from 'react-router-dom';
@@ -18,6 +20,12 @@ const Home: React.FC = () => {
           ⚠ You are in a Red Zone: <strong>{(currentZone as any)?.name || 'Unnamed Area'}</strong>
         </div>
       )}
+
+      {/* Multi-Voice Control Panel */}
+      <VoiceControlPanel />
+      
+      {/* Voice Notifications System */}
+      <VoiceNotifications />
 
       {/* Home Title and Subtitle with Hamburger */}
       <header className="home-header">
