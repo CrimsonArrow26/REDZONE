@@ -8,6 +8,7 @@ import L from 'leaflet';
 import { Marker, Popup, Circle } from 'react-leaflet';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
+import { locationStability } from '../utils/locationStability';
 
 // Your Supabase project URL and anon key
 const supabaseUrl = 'https://shqfvfjsxtdeknqncjfa.supabase.co';
@@ -68,26 +69,53 @@ const RedZones: React.FC = () => {
 
   useEffect(() => {
     let watchId: number | null = null;
+    
     if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
+      // Use existing stable location if available
+      const currentStable = locationStability.getCurrentStableLocation();
+      if (currentStable) {
+        console.log('RedZones: Using existing stable location:', currentStable);
+        setUserLocation({ 
+          lat: currentStable.lat, 
+          lng: currentStable.lng 
+        });
+      }
+
+      // Set up callback for location updates (but don't override ZoneContext callback)
+      const handleLocationUpdate = (stableLocation: any) => {
+        console.log('RedZones: Stable location updated:', stableLocation);
+        setUserLocation({ 
+          lat: stableLocation.lat, 
+          lng: stableLocation.lng 
+        });
+      };
+
+      // Since ZoneContext already handles the watchPosition and feeds to locationStability,
+      // we just need to listen for stable location changes
+      // We'll create a simple polling mechanism to check for updates
+      const pollInterval = setInterval(() => {
+        const stable = locationStability.getCurrentStableLocation();
+        if (stable && (!userLocation || 
+            userLocation.lat !== stable.lat || 
+            userLocation.lng !== stable.lng)) {
           setUserLocation({ 
-            lat: pos.coords.latitude, 
-            lng: pos.coords.longitude 
+            lat: stable.lat, 
+            lng: stable.lng 
           });
-        },
-        (error) => {
-          console.warn('Geolocation error:', error.message);
-        },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
-      );
+        }
+      }, 1000); // Check every second
+
+      return () => {
+        clearInterval(pollInterval);
+      };
     }
+    
     return () => {
       if (watchId !== null && navigator.geolocation) {
         navigator.geolocation.clearWatch(watchId);
       }
     };
-  }, []);
+  }, [userLocation]);
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;

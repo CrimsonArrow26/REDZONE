@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import './Reports.css';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { locationStability } from '../utils/locationStability';
 
 interface Report {
   id: string;
@@ -37,9 +38,10 @@ interface Incident {
 }
 
 const reportCrime = async (description: string) => {
-  navigator.geolocation.getCurrentPosition(async (position) => {
-    const userLat = position.coords.latitude;
-    const userLng = position.coords.longitude;
+  // Try to use stable location first
+  const stableLocation = locationStability.getCurrentStableLocation();
+  
+  const processReport = async (userLat: number, userLng: number) => {
     const { data: redZones, error } = await supabase
       .from('red_zones')
       .select('*');
@@ -123,9 +125,26 @@ const reportCrime = async (description: string) => {
         alert('Crime reported and new red zone created!');
       }
     }
-  }, (error) => {
-    alert('Could not get location');
-  });
+  };
+
+  if (stableLocation) {
+    console.log('Reports: Using stable location for crime report:', stableLocation);
+    await processReport(stableLocation.lat, stableLocation.lng);
+  } else {
+    // Fallback to direct GPS if no stable location available
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
+      console.log('Reports: Using direct GPS for crime report:', userLat, userLng);
+      await processReport(userLat, userLng);
+    }, (error) => {
+      alert('Could not get location');
+    }, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 30000 // Allow cached location for reporting
+    });
+  }
 };
 
 const Reports: React.FC = () => {
