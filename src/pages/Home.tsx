@@ -4,10 +4,19 @@ import FeatureCard from '../components/FeatureCard';
 import { useZone } from '../context/ZoneContext';
 import { navItems } from '../components/BottomNavigation';
 import { NavLink } from 'react-router-dom';
+import SafetyConfirmationPopup from '../components/SafetyConfirmationPopup';
 import './Home.css';
 
 const Home: React.FC = () => {
-  const { isSafe, currentZone } = useZone();
+  const { 
+    isSafe, 
+    currentZone, 
+    showSafetyPopup, 
+    accidentDetails, 
+    onSafetyConfirmed,
+    isSafetyMonitoring,
+    safetyData
+  } = useZone();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -16,6 +25,9 @@ const Home: React.FC = () => {
       {!isSafe && (
         <div className="geo-alert-banner">
           ⚠ You are in a Red Zone: <strong>{(currentZone as any)?.name || 'Unnamed Area'}</strong>
+          <div className="safety-status">
+            🛡️ Safety monitoring is active
+          </div>
         </div>
       )}
 
@@ -87,9 +99,21 @@ const Home: React.FC = () => {
             <li className="tip-item"><span className="tip-dot">•</span> Avoid poorly lit or isolated areas</li>
             <li className="tip-item"><span className="tip-dot">•</span> Keep your emergency contacts up-to-date</li>
             <li className="tip-item"><span className="tip-dot">•</span> Use the app to report suspicious activity</li>
+            <li className="tip-item"><span className="tip-dot">•</span> Safety monitoring activates automatically in red zones</li>
+            <li className="tip-item"><span className="tip-dot">•</span> The app will detect unusual movement patterns</li>
           </ul>
         </div>
       </section>
+
+      
+
+      {/* Safety Confirmation Popup */}
+      <SafetyConfirmationPopup
+        isOpen={showSafetyPopup}
+        onClose={() => onSafetyConfirmed(false)}
+        onSafetyConfirmed={onSafetyConfirmed}
+        accidentDetails={accidentDetails}
+      />
     </div>
   );
 };

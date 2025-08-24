@@ -24,38 +24,65 @@ export function LoginForm({ showPassword, onTogglePassword, onSwitchToSignup }: 
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setLoading(false);
-    if (data.user) {
-      await supabase.from('app_users').upsert([
-        {
-          id: data.user.id,
-          email: data.user.email,
-          username: data.user.user_metadata?.username || '',
-          phone: data.user.user_metadata?.phone || ''
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        setError(error.message || 'Invalid login credentials');
+        return;
+      }
+      
+      if (data.user) {
+        // Upsert user data to app_users table
+        const { error: upsertError } = await supabase.from('app_users').upsert([
+          {
+            id: data.user.id,
+            email: data.user.email,
+            username: data.user.user_metadata?.username || '',
+            phone: data.user.user_metadata?.phone || ''
+          }
+        ]);
+        
+        if (upsertError) {
+          console.warn('Failed to upsert user data:', upsertError);
         }
-      ]);
-      navigate('/home');
-    } else {
-      setError(error?.message || 'Invalid login credentials');
+        
+        // Navigate to home page after successful login
+        navigate('/home');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     setError('');
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/auth/callback'
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/auth/callback'
+        }
+      });
+      
+      if (error) {
+        setError('Google login failed. Please try again.');
+        console.error('Google OAuth error:', error);
       }
-    });
-    setLoading(false);
-    if (error) {
-      setError('Google login failed.');
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Google login error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,6 +101,7 @@ export function LoginForm({ showPassword, onTogglePassword, onSwitchToSignup }: 
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
         </div>
@@ -90,6 +118,7 @@ export function LoginForm({ showPassword, onTogglePassword, onSwitchToSignup }: 
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
         </div>
@@ -100,7 +129,7 @@ export function LoginForm({ showPassword, onTogglePassword, onSwitchToSignup }: 
           </label>
           <a href="#" className="text-sm font-semibold text-black hover:underline">Forgot password?</a>
         </div>
-        {error && <div className="text-red-500 text-sm">{error}</div>}
+        {error && <div className="text-red-500 text-sm bg-red-50 p-3 rounded-md border border-red-200">{error}</div>}
         <div className="mb-6">
           <div className="bg-red-600 rounded-md shadow-sm">
             <Button className="w-full bg-transparent text-white font-bold text-base py-3 hover:bg-red-700 focus:bg-red-700 border-none shadow-none" type="submit" disabled={loading}>
@@ -131,7 +160,8 @@ export function LoginForm({ showPassword, onTogglePassword, onSwitchToSignup }: 
           New to RedZone?{' '}
           <button 
             onClick={onSwitchToSignup}
-            className="font-medium"
+            className="font-medium text-red-600 hover:text-red-700 hover:underline"
+            disabled={loading}
           >
             Create an account
           </button>

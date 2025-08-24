@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, FileText, Calendar, AlertTriangle, Users } from 'lucide-react';
+import { Home, FileText, Calendar, AlertTriangle, Users, Shield } from 'lucide-react';
 import './BottomNavigation.css';
 
 export const navItems = [
@@ -8,7 +8,8 @@ export const navItems = [
   { path: '/news', icon: FileText, label: 'News' },
   { path: '/events', icon: Calendar, label: 'Events' },
   { path: '/alerts', icon: AlertTriangle, label: 'Alerts' },
-  { path: '/community', icon: Users, label: 'Community' }
+  { path: '/community', icon: Users, label: 'Community' },
+  { path: '/admin', icon: Shield, label: 'Admin' }
 ];
 
 const BottomNavigation: React.FC = () => {

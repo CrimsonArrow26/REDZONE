@@ -41,41 +41,63 @@ export function SignupForm({
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    // Only check if passwords match, no other validation
+    
+    // Basic validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
+    
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+    
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: {
-        data: {
-          username: formData.firstName + ' ' + formData.lastName,
-          phone: formData.phone,
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            username: formData.firstName + ' ' + formData.lastName,
+            phone: formData.phone,
+          }
         }
+      });
+      
+      if (error) {
+        setError(error.message);
+        return;
       }
-    });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else if (data.user) {
-      const { error: insertError } = await supabase.from('app_users').insert([
-        {
-          id: data.user.id,
-          email: formData.email,
-          username: formData.firstName + ' ' + formData.lastName,
-          phone: formData.phone
+      
+      if (data.user) {
+        // Insert user data to app_users table
+        const { error: insertError } = await supabase.from('app_users').insert([
+          {
+            id: data.user.id,
+            email: formData.email,
+            username: formData.firstName + ' ' + formData.lastName,
+            phone: formData.phone
+          }
+        ]);
+        
+        if (insertError) {
+          console.warn('Failed to insert user data:', insertError);
+          setError('Registration succeeded, but failed to save user details. Please contact support.');
+          return;
         }
-      ]);
-      setLoading(false);
-      if (insertError) {
-        setError('Registration succeeded, but failed to save user details.');
-      } else {
+        
+        // Show success message and redirect to login
+        setError(''); // Clear any previous errors
+        alert('Account created successfully! Please check your email to verify your account before signing in.');
         navigate('/login');
       }
-    } else {
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Registration error:', err);
+    } finally {
       setLoading(false);
     }
   };
@@ -83,15 +105,24 @@ export function SignupForm({
   const handleGoogleAuth = async () => {
     setError('');
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/auth/callback'
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/auth/callback'
+        }
+      });
+      
+      if (error) {
+        setError('Google sign up failed. Please try again.');
+        console.error('Google OAuth error:', error);
       }
-    });
-    setLoading(false);
-    if (error) {
-      setError('Google sign up failed.');
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Google signup error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -110,8 +141,9 @@ export function SignupForm({
                 className="pl-10 rounded-md border border-gray-200 focus:border-black focus:ring-2 focus:ring-black/10 bg-white text-base"
                 value={formData.firstName}
                 onChange={handleChange}
-                onKeyPress={e => { if (!/^[a-zA-Z]*$/.test(e.key)) e.preventDefault(); }}
+                onKeyPress={e => { if (!/^[a-zA-Z\s]*$/.test(e.key)) e.preventDefault(); }}
                 required
+                disabled={loading}
               />
             </div>
           </div>
@@ -126,8 +158,9 @@ export function SignupForm({
                 className="pl-10 rounded-md border border-gray-200 focus:border-black focus:ring-2 focus:ring-black/10 bg-white text-base"
                 value={formData.lastName}
                 onChange={handleChange}
-                onKeyPress={e => { if (!/^[a-zA-Z]*$/.test(e.key)) e.preventDefault(); }}
+                onKeyPress={e => { if (!/^[a-zA-Z\s]*$/.test(e.key)) e.preventDefault(); }}
                 required
+                disabled={loading}
               />
             </div>
           </div>
@@ -144,6 +177,7 @@ export function SignupForm({
               value={formData.email}
               onChange={handleChange}
               required
+              disabled={loading}
             />
           </div>
         </div>
@@ -158,8 +192,9 @@ export function SignupForm({
               className="pl-10 rounded-md border border-gray-200 focus:border-black focus:ring-2 focus:ring-black/10 bg-white text-base"
               value={formData.phone}
               onChange={handleChange}
-              onKeyPress={e => { if (!/[0-9]/.test(e.key)) e.preventDefault(); }}
+              onKeyPress={e => { if (!/[0-9+\-\s()]/.test(e.key)) e.preventDefault(); }}
               required
+              disabled={loading}
             />
           </div>
         </div>
@@ -176,6 +211,7 @@ export function SignupForm({
               value={formData.password}
               onChange={handleChange}
               required
+              disabled={loading}
             />
           </div>
         </div>
@@ -188,10 +224,11 @@ export function SignupForm({
               placeholder="Confirm your password"
               showPassword={showConfirmPassword}
               onTogglePassword={onToggleConfirmPassword}
-              className="pl-10 rounded-md border border-gray-200 focus:border-black focus:ring-2 focus:ring-black/10 bg-white text-base"
+              className="pl-10 rounded-md border border-gray-200 focus:ring-black focus:ring-2 focus:ring-black/10 bg-white text-base"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
+              disabled={loading}
             />
           </div>
         </div>
@@ -204,7 +241,7 @@ export function SignupForm({
             <a href="#" className="font-semibold text-black hover:underline">Privacy Policy</a>
           </span>
         </div>
-        {error && <div className="text-red-500 text-sm">{error}</div>}
+        {error && <div className="text-red-500 text-sm bg-red-50 p-3 rounded-md border border-red-200">{error}</div>}
         <div className="mb-6">
           <div className="bg-red-600 rounded-md shadow-sm">
             <Button className="w-full bg-transparent text-white font-bold text-base py-3 hover:bg-red-700 focus:bg-red-700 border-none shadow-none" type="submit" disabled={loading}>
@@ -235,7 +272,8 @@ export function SignupForm({
           Already have an account?{' '}
           <button 
             onClick={onSwitchToLogin}
-            className="font-medium"
+            className="font-medium text-red-600 hover:text-red-700 hover:underline"
+            disabled={loading}
           >
             Sign in here
           </button>

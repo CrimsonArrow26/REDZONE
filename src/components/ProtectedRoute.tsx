@@ -1,52 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    let isMounted = true;
-    let interval: NodeJS.Timeout;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Loading...</h2>
+          <p className="text-gray-600">Please wait while we verify your authentication.</p>
+        </div>
+      </div>
+    );
+  }
 
-    const checkSession = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (isMounted) {
-        if (error || !data.user) {
-          await supabase.auth.signOut();
-          setIsLoggedIn(false);
-          setIsLoading(false);
-        } else {
-          setIsLoggedIn(true);
-          setIsLoading(false);
-        }
-      }
-    };
-
-    checkSession(); // Initial check
-
-    // Listen for auth state changes
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (isMounted) {
-        setIsLoggedIn(!!session?.user);
-        setIsLoading(false);
-      }
-    });
-
-    // Check session every 5 minutes
-    interval = setInterval(checkSession, 5 * 60 * 1000);
-
-    return () => {
-      isMounted = false;
-      listener?.subscription.unsubscribe();
-      clearInterval(interval);
-    };
-  }, []);
-
-  if (isLoading) return null; // or a loading spinner
-
-  if (!isLoggedIn) {
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 

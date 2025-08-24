@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet';
-import { AlertTriangle, Users, Calendar } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { MapContainer, TileLayer, CircleMarker, useMap } from 'react-leaflet';
+import { AlertTriangle, Users, Calendar, Navigation } from 'lucide-react';
 import Header from '../components/Header';
 import 'leaflet/dist/leaflet.css';
 import './RedZones.css';
@@ -8,11 +8,30 @@ import L from 'leaflet';
 import { Marker, Popup, Circle } from 'react-leaflet';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
+import SafetyConfirmationPopup from '../components/SafetyConfirmationPopup';
+import { useZone } from '../context/ZoneContext';
 
 // Your Supabase project URL and anon key
 const supabaseUrl = 'https://shqfvfjsxtdeknqncjfa.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNocWZ2ZmpzeHRkZWtucW5jamZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MDgzNzMsImV4cCI6MjA2ODQ4NDM3M30.enzNuGiPvfMZLUPLPeDPBlMsHBOP9foFOjbGjQhLsnc';
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Map Controller Component to handle map operations
+const MapController: React.FC<{ userLocation: { lat: number, lng: number } | null }> = ({ userLocation }) => {
+  const map = useMap();
+  
+  // Expose map instance globally for the focus button
+  useEffect(() => {
+    if (map) {
+      (window as any).currentMap = map;
+    }
+    return () => {
+      delete (window as any).currentMap;
+    };
+  }, [map]);
+
+  return null;
+};
 
 interface RedZone {
   id: string;
@@ -43,6 +62,13 @@ const RedZones: React.FC = () => {
   const [inZone, setInZone] = useState<RedZone | null>(null);
   const [hasNotified, setHasNotified] = useState(false);
   const navigate = useNavigate();
+  
+  // Get safety monitoring data from ZoneContext
+  const { 
+    showSafetyPopup, 
+    accidentDetails, 
+    onSafetyConfirmed 
+  } = useZone();
 
   // Haversine distance in meters
   function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -68,20 +94,52 @@ const RedZones: React.FC = () => {
 
   useEffect(() => {
     let watchId: number | null = null;
+    
+    const handleLocationSuccess = (pos: GeolocationPosition) => {
+      const newLocation = { 
+        lat: pos.coords.latitude, 
+        lng: pos.coords.longitude 
+      };
+      console.log('📍 User location updated:', newLocation);
+      setUserLocation(newLocation);
+    };
+
+    const handleLocationError = (error: GeolocationPositionError) => {
+      console.warn('Geolocation error:', error.message);
+      // Set a default location (Pune) if geolocation fails
+      if (!userLocation) {
+        setUserLocation({ lat: 18.5204, lng: 73.8567 });
+      }
+    };
+
     if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          setUserLocation({ 
-            lat: pos.coords.latitude, 
-            lng: pos.coords.longitude 
-          });
-        },
-        (error) => {
-          console.warn('Geolocation error:', error.message);
-        },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+      // First, try to get current position immediately
+      navigator.geolocation.getCurrentPosition(
+        handleLocationSuccess,
+        handleLocationError,
+        { 
+          enableHighAccuracy: true, 
+          timeout: 10000, 
+          maximumAge: 30000 
+        }
       );
+
+      // Then start watching for position updates
+      watchId = navigator.geolocation.watchPosition(
+        handleLocationSuccess,
+        handleLocationError,
+        { 
+          enableHighAccuracy: true, 
+          maximumAge: 10000, 
+          timeout: 20000 
+        }
+      );
+    } else {
+      console.warn('Geolocation not supported');
+      // Set default location if geolocation is not supported
+      setUserLocation({ lat: 18.5204, lng: 73.8567 });
     }
+
     return () => {
       if (watchId !== null && navigator.geolocation) {
         navigator.geolocation.clearWatch(watchId);
@@ -126,6 +184,26 @@ const RedZones: React.FC = () => {
 
         setRedZones(zones);
         setLoading(false);
+
+        // Debug logging
+        console.log('🗺️ Red zones loaded:', zones.length);
+        console.log('🗺️ Displayable zones:', zones.filter(zone => 
+          zone && 
+          zone.coordinates && 
+          zone.coordinates.length === 2 &&
+          zone.risk_level &&
+          !isNaN(zone.coordinates[0]) &&
+          !isNaN(zone.coordinates[1])
+        ).length);
+        console.log('🗺️ High activity zones:', zones.filter(zone => 
+          zone && 
+          zone.coordinates && 
+          zone.coordinates.length === 2 &&
+          zone.risk_level &&
+          !isNaN(zone.coordinates[0]) &&
+          !isNaN(zone.coordinates[1]) &&
+          zone.incidentCount > INCIDENT_THRESHOLD
+        ).length);
 
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch red zones');
@@ -327,12 +405,13 @@ const RedZones: React.FC = () => {
             zoom={12}
             className="redzones-leaflet-map"
           >
+            <MapController userLocation={userLocation} />
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
             
-            {highActivityZones.map((zone) => (
+            {displayableZones.map((zone) => (
               <React.Fragment key={zone.id}>
                 <Circle
                   center={zone.coordinates}
@@ -371,6 +450,28 @@ const RedZones: React.FC = () => {
               </React.Fragment>
             ))}
             
+            {/* Debug info - show when no zones are displayed */}
+            {displayableZones.length === 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                padding: '1rem',
+                borderRadius: '0.5rem',
+                zIndex: 1000,
+                textAlign: 'center'
+              }}>
+                <p>No red zones to display</p>
+                <p style={{fontSize: '0.8rem', marginTop: '0.5rem'}}>
+                  Total zones: {redZones.length}<br/>
+                  Valid coordinates: {redZones.filter(z => z.coordinates && z.coordinates.length === 2).length}
+                </p>
+              </div>
+            )}
+            
             {/* User live location marker */}
             {userLocation && (
               <Marker
@@ -386,6 +487,49 @@ const RedZones: React.FC = () => {
               </Marker>
             )}
           </MapContainer>
+          
+          {/* Focus on My Location Button */}
+          {userLocation && (
+            <button
+              className="focus-location-btn"
+              onClick={() => {
+                const map = (window as any).currentMap;
+                if (map && userLocation) {
+                  // Get current live location
+                  if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                      (position) => {
+                        const currentLocation = {
+                          lat: position.coords.latitude,
+                          lng: position.coords.longitude
+                        };
+                        console.log('📍 Focusing on current live location:', currentLocation);
+                        map.setView([currentLocation.lat, currentLocation.lng], 15);
+                        // Update user location state with current position
+                        setUserLocation(currentLocation);
+                      },
+                      (error) => {
+                        console.warn('Error getting current location:', error.message);
+                        // Fallback to stored location
+                        map.setView([userLocation.lat, userLocation.lng], 15);
+                      },
+                      { 
+                        enableHighAccuracy: true, 
+                        timeout: 5000, 
+                        maximumAge: 0 
+                      }
+                    );
+                  } else {
+                    // Fallback to stored location
+                    map.setView([userLocation.lat, userLocation.lng], 15);
+                  }
+                }
+              }}
+              title="Focus on my current location"
+            >
+              <Navigation size={20} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -416,7 +560,7 @@ const RedZones: React.FC = () => {
         </div>
       </div>
 
-      {/* Red Zone Details List */}
+            {/* Red Zone Details List */}
       <div className="redzones-list-section">
         <h3 className="redzones-list-title">Red Zone Details</h3>
         {displayableZones.length === 0 ? (
@@ -469,6 +613,13 @@ const RedZones: React.FC = () => {
         )}
       </div>
 
+      {/* Safety Confirmation Popup */}
+      <SafetyConfirmationPopup
+        isOpen={showSafetyPopup}
+        onClose={() => onSafetyConfirmed(false)}
+        onSafetyConfirmed={onSafetyConfirmed}
+        accidentDetails={accidentDetails}
+      />
 
     </div>
   );

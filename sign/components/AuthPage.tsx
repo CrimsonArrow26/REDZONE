@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { AuthHeader } from './AuthHeader';
@@ -10,6 +11,17 @@ export function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Set active tab based on URL path
+  useEffect(() => {
+    if (location.pathname === '/register') {
+      setActiveTab('signup');
+    } else {
+      setActiveTab('login');
+    }
+  }, [location.pathname]);
   
   const headerContent = {
     login: {
@@ -24,10 +36,12 @@ export function AuthPage() {
 
   const handleSwitchToSignup = () => {
     setActiveTab('signup');
+    navigate('/register');
   };
 
   const handleSwitchToLogin = () => {
     setActiveTab('login');
+    navigate('/login');
   };
   
   return (
@@ -46,7 +60,7 @@ export function AuthPage() {
           </CardHeader>
           
           <CardContent className="px-6 sm:px-8 pb-8 sm:pb-10">
-            <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="flex w-full bg-gray-100 rounded-lg p-1 mb-6 shadow-sm">
                 <TabsTrigger 
                   value="login" 

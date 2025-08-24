@@ -21,6 +21,7 @@
   margin: 1.5rem 1rem 1.5rem 1rem;
 }
 .redzones-map-container {
+  position: relative;
   height: 24rem;
   border-radius: 1rem;
   overflow: hidden;
@@ -206,3 +207,34 @@
   font-weight: bold;
   cursor: pointer;
 }
+
+/* Focus Location Button */
+.focus-location-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.focus-location-btn:hover {
+  background: #1d4ed8;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.focus-location-btn:active {
+  transform: scale(0.95);
+}
+
