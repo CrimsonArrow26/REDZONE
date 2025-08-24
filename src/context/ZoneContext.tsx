@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { SafetyMonitor } from '../utils/safetyMonitor';
+import { SOSService } from '../utils/sosService';
 
 // Supabase setup
 const supabaseUrl = 'https://shqfvfjsxtdeknqncjfa.supabase.co';
@@ -20,11 +22,48 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 // Context type
-const ZoneContext = createContext({
+interface ZoneContextType {
+  currentZone: any;
+  isSafe: boolean;
+  userLocation: { lat: number; lng: number } | null;
+  zones: any[];
+  safetyMonitor: SafetyMonitor | null;
+  sosService: SOSService | null;
+  voiceSessions: Map<string, any>;
+  activeSessionCount: number;
+  currentVoiceLevel: number;
+  createVoiceSession: (sessionId: string, keywords?: string[]) => Promise<boolean>;
+  startVoiceSession: (sessionId: string) => boolean;
+  stopVoiceSession: (sessionId: string) => boolean;
+  updateKeywords: (sessionId: string, keywords: string[]) => boolean;
+  getSessionTranscript: (sessionId: string) => string;
+  safetyCallbacks: {
+    onSpeedAccident?: (details: any) => void;
+    onStationaryAlert?: (details: any) => void;
+    onVoiceKeyword?: (details: any) => void;
+    onVoiceLevel?: (details: any) => void;
+    onTranscriptUpdate?: (sessionId: string, transcript: string) => void;
+  };
+  setSafetyCallbacks: (callbacks: any) => void;
+}
+
+const ZoneContext = createContext<ZoneContextType>({
   currentZone: null,
   isSafe: true,
   userLocation: null,
   zones: [],
+  safetyMonitor: null,
+  sosService: null,
+  voiceSessions: new Map(),
+  activeSessionCount: 0,
+  currentVoiceLevel: 0,
+  createVoiceSession: async () => false,
+  startVoiceSession: () => false,
+  stopVoiceSession: () => false,
+  updateKeywords: () => false,
+  getSessionTranscript: () => '',
+  safetyCallbacks: {},
+  setSafetyCallbacks: () => {},
 });
 
 export const ZoneProvider = ({ children }) => {
@@ -32,6 +71,32 @@ export const ZoneProvider = ({ children }) => {
   const [userLocation, setUserLocation] = useState(null);
   const [currentZone, setCurrentZone] = useState(null);
   const [alertShown, setAlertShown] = useState(false);
+  
+  // Safety monitoring state
+  const [safetyMonitor, setSafetyMonitor] = useState<SafetyMonitor | null>(null);
+  const [sosService, setSosService] = useState<SOSService | null>(null);
+  const [voiceSessions, setVoiceSessions] = useState(new Map());
+  const [activeSessionCount, setActiveSessionCount] = useState(0);
+  const [currentVoiceLevel, setCurrentVoiceLevel] = useState(0);
+  const [safetyCallbacks, setSafetyCallbacks] = useState({});
+
+  // Initialize safety monitoring services
+  useEffect(() => {
+    const sosServiceInstance = new SOSService();
+    const safetyMonitorInstance = new SafetyMonitor(sosServiceInstance);
+    
+    setSosService(sosServiceInstance);
+    setSafetyMonitor(safetyMonitorInstance);
+    
+    console.log('🔧 Safety monitoring services initialized');
+    
+    return () => {
+      // Cleanup on unmount
+      if (safetyMonitorInstance) {
+        safetyMonitorInstance.stopMonitoring();
+      }
+    };
+  }, []);
 
   // Fetch red zones from Supabase
   useEffect(() => {
@@ -84,7 +149,7 @@ export const ZoneProvider = ({ children }) => {
     }
   }, [userLocation, zones]);
 
-  // Alert when entering red zone
+  // Alert when entering red zone and start safety monitoring
   useEffect(() => {
     if (currentZone && !alertShown) {
       const zoneName = currentZone.name || 'a Red Zone';
@@ -94,13 +159,115 @@ export const ZoneProvider = ({ children }) => {
         navigator.vibrate([300, 100, 300]);
       }
 
+      // Start safety monitoring when entering red zone
+      if (safetyMonitor) {
+        const callbacks = {
+          onSpeedAccident: (details: any) => {
+            console.log('🚨 Speed accident detected:', details);
+            if (safetyCallbacks.onSpeedAccident) {
+              safetyCallbacks.onSpeedAccident(details);
+            }
+          },
+          onStationaryAlert: (details: any) => {
+            console.log('🚶 Stationary alert:', details);
+            if (safetyCallbacks.onStationaryAlert) {
+              safetyCallbacks.onStationaryAlert(details);
+            }
+          },
+          onVoiceKeyword: (details: any) => {
+            console.log('🎤 Voice keyword detected:', details);
+            if (safetyCallbacks.onVoiceKeyword) {
+              safetyCallbacks.onVoiceKeyword(details);
+            }
+          },
+          onVoiceLevel: (details: any) => {
+            console.log('🔊 Voice level alert:', details);
+            if (safetyCallbacks.onVoiceLevel) {
+              safetyCallbacks.onVoiceLevel(details);
+            }
+          },
+          onTranscriptUpdate: (sessionId: string, transcript: string) => {
+            if (safetyCallbacks.onTranscriptUpdate) {
+              safetyCallbacks.onTranscriptUpdate(sessionId, transcript);
+            }
+          }
+        };
+
+        safetyMonitor.startMonitoring(currentZone.id, callbacks);
+        
+        // Update voice sessions and stats periodically
+        const updateInterval = setInterval(() => {
+          if (safetyMonitor) {
+            setVoiceSessions(new Map(safetyMonitor.getVoiceSessions()));
+            setActiveSessionCount(safetyMonitor.getActiveSessionCount());
+            setCurrentVoiceLevel(safetyMonitor.getCurrentVoiceLevel());
+          }
+        }, 1000);
+
+        // Store interval for cleanup
+        (window as any).safetyUpdateInterval = updateInterval;
+      }
+
       setAlertShown(true);
     }
 
     if (!currentZone) {
-      setAlertShown(false); // reset when out of danger zone
+      // Stop safety monitoring when leaving red zone
+      if (safetyMonitor) {
+        safetyMonitor.stopMonitoring();
+      }
+      
+      // Clear update interval
+      if ((window as any).safetyUpdateInterval) {
+        clearInterval((window as any).safetyUpdateInterval);
+        (window as any).safetyUpdateInterval = null;
+      }
+      
+      // Reset state
+      setVoiceSessions(new Map());
+      setActiveSessionCount(0);
+      setCurrentVoiceLevel(0);
+      setAlertShown(false);
     }
-  }, [currentZone]);
+  }, [currentZone, safetyMonitor, safetyCallbacks]);
+
+  // Voice session management functions
+  const createVoiceSession = async (sessionId: string, keywords?: string[]): Promise<boolean> => {
+    if (!safetyMonitor) return false;
+    const result = await safetyMonitor.createVoiceSession(sessionId, keywords);
+    if (result) {
+      setVoiceSessions(new Map(safetyMonitor.getVoiceSessions()));
+    }
+    return result;
+  };
+
+  const startVoiceSession = (sessionId: string): boolean => {
+    if (!safetyMonitor) return false;
+    const result = safetyMonitor.startVoiceSession(sessionId);
+    if (result) {
+      setActiveSessionCount(safetyMonitor.getActiveSessionCount());
+    }
+    return result;
+  };
+
+  const stopVoiceSession = (sessionId: string): boolean => {
+    if (!safetyMonitor) return false;
+    const result = safetyMonitor.stopVoiceSession(sessionId);
+    if (result) {
+      setActiveSessionCount(safetyMonitor.getActiveSessionCount());
+    }
+    return result;
+  };
+
+  const updateKeywords = (sessionId: string, keywords: string[]): boolean => {
+    if (!safetyMonitor) return false;
+    return safetyMonitor.updateKeywords(sessionId, keywords);
+  };
+
+  const getSessionTranscript = (sessionId: string): string => {
+    if (!safetyMonitor) return '';
+    return safetyMonitor.getSessionTranscript(sessionId);
+  };
 
   return (
     <ZoneContext.Provider
@@ -109,6 +276,18 @@ export const ZoneProvider = ({ children }) => {
         isSafe: !currentZone,
         userLocation,
         zones,
+        safetyMonitor,
+        sosService,
+        voiceSessions,
+        activeSessionCount,
+        currentVoiceLevel,
+        createVoiceSession,
+        startVoiceSession,
+        stopVoiceSession,
+        updateKeywords,
+        getSessionTranscript,
+        safetyCallbacks,
+        setSafetyCallbacks,
       }}
     >
       {children}
