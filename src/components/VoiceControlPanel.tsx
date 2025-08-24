@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Volume2, VolumeX, Play, Square, Settings, Trash2, Plus } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, Play, Square, Settings, Trash2, Plus, Template } from 'lucide-react';
 import { useZone } from '../context/ZoneContext';
+import VoiceTemplateSelector from './VoiceTemplateSelector';
+import VoiceSettings, { VoiceSettings as VoiceSettingsType, DEFAULT_SETTINGS } from './VoiceSettings';
+import { VoiceTemplate } from '../utils/voiceTemplates';
 
 interface VoiceSession {
   id: string;
@@ -24,9 +27,13 @@ const VoiceControlPanel: React.FC = () => {
 
   const [sessions, setSessions] = useState<VoiceSession[]>([]);
   const [showAddSession, setShowAddSession] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [newSessionId, setNewSessionId] = useState('');
   const [newSessionKeywords, setNewSessionKeywords] = useState('help,emergency,danger');
   const [transcripts, setTranscripts] = useState<Record<string, string>>({});
+  const [activeSessions, setActiveSessions] = useState<string[]>([]);
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettingsType>(DEFAULT_SETTINGS);
 
   // Convert Map to array for easier rendering
   useEffect(() => {
@@ -47,6 +54,10 @@ const VoiceControlPanel: React.FC = () => {
       newTranscripts[session.id] = getSessionTranscript(session.id);
     });
     setTranscripts(newTranscripts);
+
+    // Track active sessions
+    const activeSessionIds = sessionArray.filter(s => s.isActive).map(s => s.id);
+    setActiveSessions(activeSessionIds);
   }, [voiceSessions, getSessionTranscript]);
 
   const handleCreateSession = async () => {
@@ -85,6 +96,78 @@ const VoiceControlPanel: React.FC = () => {
     updateKeywords(sessionId, keywords);
   };
 
+  // Template selection handlers
+  const handleTemplateSelect = async (template: VoiceTemplate) => {
+    const sessionId = template.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    const success = await createVoiceSession(sessionId, template.keywords);
+    if (success) {
+      console.log(`✅ Created session from template: ${template.name}`);
+      setShowTemplates(false);
+    } else {
+      // If session exists, try with timestamp
+      const uniqueSessionId = `${sessionId}-${Date.now()}`;
+      const retrySuccess = await createVoiceSession(uniqueSessionId, template.keywords);
+      if (retrySuccess) {
+        console.log(`✅ Created session from template with unique ID: ${uniqueSessionId}`);
+        setShowTemplates(false);
+      } else {
+        alert('Failed to create session from template');
+      }
+    }
+  };
+
+  const handleCustomTemplateCreate = async (template: VoiceTemplate) => {
+    await handleTemplateSelect(template);
+  };
+
+  const handleQuickStart = async () => {
+    // Create multiple popular sessions at once
+    const quickTemplates = [
+      { id: 'primary-english', keywords: ['help', 'emergency', 'danger'] },
+      { id: 'medical', keywords: ['ambulance', 'heart attack', 'unconscious', 'bleeding'] },
+      { id: 'multilingual', keywords: ['help', 'socorro', 'aide', 'hilfe', 'aiuto'] }
+    ];
+
+    let successCount = 0;
+    for (const template of quickTemplates) {
+      const success = await createVoiceSession(template.id, template.keywords);
+      if (success) successCount++;
+    }
+
+    console.log(`🚀 Quick start completed: ${successCount}/${quickTemplates.length} sessions created`);
+  };
+
+  const handleSettingsChange = (newSettings: VoiceSettingsType) => {
+    setVoiceSettings(newSettings);
+    console.log('🔧 Voice settings updated:', newSettings);
+    
+    // Apply settings to safety monitor if available
+    if (safetyMonitor) {
+      // Update safety monitor configuration here
+      // This would require updating the SafetyMonitor class to accept settings
+    }
+    
+    // Save to localStorage for persistence
+    try {
+      localStorage.setItem('clocktower_voice_settings', JSON.stringify(newSettings));
+    } catch (error) {
+      console.error('Failed to save voice settings:', error);
+    }
+  };
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedSettings = localStorage.getItem('clocktower_voice_settings');
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        setVoiceSettings(parsed);
+      }
+    } catch (error) {
+      console.error('Failed to load voice settings:', error);
+    }
+  }, []);
+
   const getVoiceLevelColor = () => {
     if (currentVoiceLevel > 0.8) return '#ff4444'; // Red - Very high
     if (currentVoiceLevel > 0.6) return '#ff9944'; // Orange - High
@@ -108,25 +191,64 @@ const VoiceControlPanel: React.FC = () => {
     <div className="voice-control-panel">
       <div className="voice-header">
         <h3>🎤 Multi-Voice Safety Monitor</h3>
-        <div className="voice-stats">
-          <span className="active-sessions">
-            Active Sessions: <strong>{activeSessionCount}</strong>
-          </span>
-          <div className="voice-level-indicator">
-            <Volume2 size={16} />
-            <div className="voice-level-bar">
-              <div 
-                className="voice-level-fill" 
-                style={{ 
-                  width: `${currentVoiceLevel * 100}%`,
-                  backgroundColor: getVoiceLevelColor()
-                }}
-              />
-            </div>
-            <span>{(currentVoiceLevel * 100).toFixed(0)}%</span>
-          </div>
+        <div className="voice-actions">
+          <button onClick={handleQuickStart} className="quick-start-btn" title="Create 3 popular sessions instantly">
+            🚀 Quick Start
+          </button>
+          <button 
+            onClick={() => setShowTemplates(!showTemplates)} 
+            className="template-btn"
+            title="Browse voice templates"
+          >
+            <Template size={16} />
+            Templates
+          </button>
+          <button 
+            onClick={() => setShowSettings(!showSettings)} 
+            className="settings-btn"
+            title="Voice recognition settings"
+          >
+            <Settings size={16} />
+            Settings
+          </button>
         </div>
       </div>
+      
+      <div className="voice-stats">
+        <span className="active-sessions">
+          Active Sessions: <strong>{activeSessionCount}</strong>
+        </span>
+        <div className="voice-level-indicator">
+          <Volume2 size={16} />
+          <div className="voice-level-bar">
+            <div 
+              className="voice-level-fill" 
+              style={{ 
+                width: `${currentVoiceLevel * 100}%`,
+                backgroundColor: getVoiceLevelColor()
+              }}
+            />
+          </div>
+          <span>{(currentVoiceLevel * 100).toFixed(0)}%</span>
+        </div>
+      </div>
+
+      {/* Template Selector */}
+      {showTemplates && (
+        <VoiceTemplateSelector
+          onSelectTemplate={handleTemplateSelect}
+          onCreateCustom={handleCustomTemplateCreate}
+          selectedTemplates={activeSessions}
+        />
+      )}
+
+      {/* Voice Settings */}
+      {showSettings && (
+        <VoiceSettings
+          currentSettings={voiceSettings}
+          onSettingsChange={handleSettingsChange}
+        />
+      )}
 
       {/* Voice Sessions */}
       <div className="voice-sessions">
@@ -263,7 +385,7 @@ const VoiceControlPanel: React.FC = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 15px;
           flex-wrap: wrap;
           gap: 10px;
         }
@@ -273,11 +395,75 @@ const VoiceControlPanel: React.FC = () => {
           color: #333;
         }
 
+        .voice-actions {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .quick-start-btn {
+          padding: 8px 12px;
+          background: linear-gradient(135deg, #4CAF50, #45a049);
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 500;
+          transition: all 0.2s;
+          box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+        }
+
+        .quick-start-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 3px 6px rgba(76, 175, 80, 0.4);
+        }
+
+        .template-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          background: #2196F3;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 12px;
+          transition: all 0.2s;
+        }
+
+        .template-btn:hover {
+          background: #1976D2;
+        }
+
+        .settings-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          background: #9C27B0;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 12px;
+          transition: all 0.2s;
+        }
+
+        .settings-btn:hover {
+          background: #7B1FA2;
+        }
+
         .voice-stats {
           display: flex;
           align-items: center;
           gap: 15px;
           flex-wrap: wrap;
+          margin-bottom: 20px;
+          padding: 10px;
+          background: #f8f9fa;
+          border-radius: 8px;
         }
 
         .active-sessions {
