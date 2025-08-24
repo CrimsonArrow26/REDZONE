@@ -5,6 +5,7 @@ import { useZone } from '../context/ZoneContext';
 import { navItems } from '../components/BottomNavigation';
 import { NavLink } from 'react-router-dom';
 import SafetyConfirmationPopup from '../components/SafetyConfirmationPopup';
+import EnhancedSafetyMonitoring from '../components/EnhancedSafetyMonitoring';
 import './Home.css';
 
 const Home: React.FC = () => {
@@ -18,6 +19,24 @@ const Home: React.FC = () => {
     safetyData
   } = useZone();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Get current location for safety monitoring
+  React.useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+        }
+      );
+    }
+  }, []);
 
   return (
     <div className="homepage">
@@ -80,6 +99,12 @@ const Home: React.FC = () => {
         </>
       )}
 
+      {/* Enhanced Safety Monitoring - Available to all users */}
+      <EnhancedSafetyMonitoring 
+        isInRedZone={!isSafe}
+        currentLocation={currentLocation}
+      />
+
       {/* Feature Cards */}
       <section className="feature-grid">
         <FeatureCard title="Live Map" icon={MapPin} to="/redzones" state={{ fromHome: true }} className="feature-card pink" />
@@ -101,11 +126,11 @@ const Home: React.FC = () => {
             <li className="tip-item"><span className="tip-dot">•</span> Use the app to report suspicious activity</li>
             <li className="tip-item"><span className="tip-dot">•</span> Safety monitoring activates automatically in red zones</li>
             <li className="tip-item"><span className="tip-dot">•</span> The app will detect unusual movement patterns</li>
+            <li className="tip-item"><span className="tip-dot">•</span> Voice recognition can detect emergency keywords</li>
+            <li className="tip-item"><span className="tip-dot">•</span> Movement monitoring detects sudden stops and acceleration</li>
           </ul>
         </div>
       </section>
-
-      
 
       {/* Safety Confirmation Popup */}
       <SafetyConfirmationPopup

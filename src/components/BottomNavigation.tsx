@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, FileText, Calendar, AlertTriangle, Users, Shield } from 'lucide-react';
+import SOSService from '../utils/sosService';
 import './BottomNavigation.css';
 
 export const navItems = [
@@ -8,16 +9,51 @@ export const navItems = [
   { path: '/news', icon: FileText, label: 'News' },
   { path: '/events', icon: Calendar, label: 'Events' },
   { path: '/alerts', icon: AlertTriangle, label: 'Alerts' },
-  { path: '/community', icon: Users, label: 'Community' },
-  { path: '/admin', icon: Shield, label: 'Admin' }
+  { path: '/community', icon: Users, label: 'Community' }
 ];
 
 const BottomNavigation: React.FC = () => {
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const sosService = new SOSService();
+      await sosService.initialize();
+      const adminStatus = await sosService.isCurrentUserAdmin();
+      setIsAdmin(adminStatus);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create navigation items array based on admin status
+  const getNavItems = () => {
+    const items = [...navItems];
+    if (isAdmin) {
+      items.push({ path: '/admin', icon: Shield, label: 'Admin' });
+    }
+    return items;
+  };
+
+  if (loading) {
+    return null; // Don't show navigation while checking admin status
+  }
+
+  const currentNavItems = getNavItems();
+
   return (
     <nav className="bottom-nav md:hidden">
       <div className="bottom-nav-inner">
-        {navItems.map((item) => {
+        {currentNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
           return (

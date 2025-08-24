@@ -85,8 +85,9 @@ The ClockTower app is a mobile-based web application built with **React and Type
 4. **Test Keyword**: Say "help" clearly into the microphone
 5. **Verify Detection**: Check console for "Keyword 'help' detected!" message
 6. **Check Admin Alert**: Verify that an SOS alert is sent to the admin dashboard
-7. **View Transcript**: See real-time transcript of your speech in the voice recognition testing section
-8. **Control Listening**: Use the button to start/stop keyword listening as needed
+7. **Use Test Button**: In development mode, use the "🎤 Start Voice Test" button for debugging
+8. **View Transcript**: See real-time transcript of your speech in the voice recognition testing section
+9. **Control Listening**: Use the button to start/stop keyword listening as needed
 
 **Note**: The system is always active in red zones for other safety parameters (speed, voice level, stationary detection), but keyword listening requires manual activation via the button.
 
@@ -98,10 +99,6 @@ This AI has been working on developing safety features for the ClockTower app. T
 - Fixed speed unit conversion from m/s to km/h for better user experience
 - Resolved microphone listening issues that prevented keyword "help" detection
 - Enhanced Web Speech API implementation with proper lifecycle management
-- **Latest Updates**:
-  - Disabled continuous voice level monitoring to focus on keyword detection
-  - Kept all admin dashboard functions but disabled unused buttons (Check Status, Reset System, Re-enable Speech, Debug Microphone)
-  - Maintained manual keyword listening control system
 - Added comprehensive debugging and testing capabilities for voice recognition
 - **NEW**: Added real-time transcript functionality to show what users are speaking
 - **NEW**: Changed emergency keyword from "satyam" to "help" for better usability
@@ -114,7 +111,5 @@ This AI has been working on developing safety features for the ClockTower app. T
 - Keyword listening only activates when user clicks the button
 - Provides clear visual feedback on listening status
 - Maintains all existing safety monitoring features
-- **Simplified Interface**: Removed debug/testing buttons, keeping only essential controls
-- **Keyword Update Complete**: All references to "satyam" have been replaced with "help" throughout the codebase
 
 The database schema has been updated, RLS policies are a known area for further work, and the voice recognition system now provides user control over keyword listening while maintaining continuous safety monitoring. Users can now choose when to activate keyword detection for the emergency keyword "help" when in red zones.

@@ -15,9 +15,10 @@ import {
   MessageSquare,
   Calendar,
   Shield,
-  Mic,
-  MicOff,
-  Volume2
+  BarChart3,
+  Activity,
+  Users as UsersIcon,
+  Settings
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -37,15 +38,14 @@ const AdminDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sosService] = useState(() => new SOSService());
   
-  // Voice recognition state
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [recognition, setRecognition] = useState<any>(null);
-  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
-  const [liveSoundLevel, setLiveSoundLevel] = useState<number | null>(null);
-  const [isManualKeywordListeningEnabled, setIsManualKeywordListeningEnabled] = useState(false);
-  const [hasKeywordDetected, setHasKeywordDetected] = useState(false);
-  const [isSafetyMonitoring, setIsSafetyMonitoring] = useState(false);
+  // Admin dashboard statistics
+  const [stats, setStats] = useState({
+    totalAlerts: 0,
+    pendingAlerts: 0,
+    resolvedAlerts: 0,
+    activeUsers: 0,
+    systemStatus: 'operational'
+  });
 
   useEffect(() => {
     checkAdminStatus();
@@ -54,33 +54,9 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     if (isAdmin) {
       fetchSOSAlerts();
+      fetchDashboardStats();
     }
   }, [isAdmin]);
-  
-  // Cleanup voice recognition on unmount
-  useEffect(() => {
-    return () => {
-      if (recognition) {
-        recognition.stop();
-      }
-    };
-  }, [recognition]);
-  
-  // Monitor network status
-  useEffect(() => {
-    const updateNetworkStatus = () => {
-      setNetworkStatus(navigator.onLine ? 'online' : 'offline');
-    };
-    
-    window.addEventListener('online', updateNetworkStatus);
-    window.addEventListener('offline', updateNetworkStatus);
-    updateNetworkStatus(); // Set initial status
-    
-    return () => {
-      window.removeEventListener('online', updateNetworkStatus);
-      window.removeEventListener('offline', updateNetworkStatus);
-    };
-  }, []);
 
   const checkAdminStatus = async () => {
     try {
@@ -109,6 +85,37 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchDashboardStats = async () => {
+    try {
+      // Fetch statistics from database
+      const { data: alertsData } = await supabase
+        .from('sos_alerts')
+        .select('status, created_at');
+
+      const { data: usersData } = await supabase
+        .from('app_users')
+        .select('id, last_active');
+
+      const totalAlerts = alertsData?.length || 0;
+      const pendingAlerts = alertsData?.filter(a => a.status === 'pending').length || 0;
+      const resolvedAlerts = alertsData?.filter(a => a.status === 'resolved').length || 0;
+      
+      // Count active users (active in last 24 hours)
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const activeUsers = usersData?.filter(u => u.last_active > twentyFourHoursAgo).length || 0;
+
+      setStats({
+        totalAlerts,
+        pendingAlerts,
+        resolvedAlerts,
+        activeUsers,
+        systemStatus: 'operational'
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    }
+  };
+
   const updateAlertStatus = async (alertId: string, status: 'acknowledged' | 'resolved') => {
     try {
       const result = await sosService.updateSOSAlertStatus(alertId, status, adminNotes);
@@ -124,6 +131,9 @@ const AdminDashboard: React.FC = () => {
         setSelectedAlert(null);
         setAdminNotes('');
         alert(`Alert ${status} successfully`);
+        
+        // Refresh stats
+        fetchDashboardStats();
       } else {
         alert(`Failed to update alert: ${result.error}`);
       }
@@ -138,524 +148,176 @@ const AdminDashboard: React.FC = () => {
     window.open(url, '_blank');
   };
 
-
-
-
-
-
-
-
-
-  // New voice recognition system from scratch
-  const startVoiceRecognition = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Speech recognition not supported in this browser');
-      return;
-    }
-
-    try {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      const newRecognition = new SpeechRecognition();
-      
-      // Configure recognition
-      newRecognition.continuous = true;
-      newRecognition.interimResults = true;
-      newRecognition.lang = 'en-US';
-      
-      // Set up event handlers
-      newRecognition.onstart = () => {
-        console.log('🎤 Voice recognition started - listening for keywords...');
-        setIsListening(true);
-        setTranscript('');
-      };
-      
-      newRecognition.onresult = (event: any) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-        
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        
-        // Update transcript display
-        setTranscript(finalTranscript + interimTranscript);
-        
-        // Check for keywords in final results
-        if (finalTranscript) {
-          const lowerTranscript = finalTranscript.toLowerCase();
-          console.log('🎯 Final transcript:', finalTranscript);
-          
-          // Check for "help" keyword
-          if (lowerTranscript.includes('help')) {
-            console.log('🚨 HELP keyword detected!');
-            setHasKeywordDetected(true);
-            alert('🚨 HELP keyword detected! Emergency response triggered.');
-            // Here you can add logic to send SOS alerts, etc.
-          }
-          
-          // Check for other keywords if needed
-          if (lowerTranscript.includes('emergency')) {
-            console.log('🚨 EMERGENCY keyword detected!');
-            alert('🚨 EMERGENCY keyword detected!');
-          }
-          
-          if (lowerTranscript.includes('sos')) {
-            console.log('🚨 SOS keyword detected!');
-            alert('🚨 SOS keyword detected!');
-          }
-        }
-      };
-      
-      newRecognition.onerror = (event: any) => {
-        console.error('❌ Voice recognition error:', event.error);
-        setIsListening(false);
-        if (event.error === 'not-allowed') {
-          alert('Microphone access denied. Please allow microphone access and try again.');
-        }
-      };
-      
-      newRecognition.onend = () => {
-        console.log('🎤 Voice recognition ended');
-        setIsListening(false);
-      };
-      
-      // Start recognition
-      newRecognition.start();
-      setRecognition(newRecognition);
-      
-    } catch (error) {
-      console.error('❌ Failed to start voice recognition:', error);
-      alert('Failed to start voice recognition. Please check console for details.');
-    }
-  };
-  
-  const stopVoiceRecognition = () => {
-    if (recognition) {
-      recognition.stop();
-      setRecognition(null);
-      setIsListening(false);
-      console.log('🎤 Voice recognition stopped');
-    }
-  };
-  
-  const toggleVoiceRecognition = () => {
-    if (isListening) {
-      stopVoiceRecognition();
-    } else {
-      startVoiceRecognition();
-    }
-  };
-
-  // Get sound level color based on threshold
-  const getSoundLevelColor = (level: number) => {
-    if (level > 80) return '#dc2626'; // Red for high levels
-    if (level > 60) return '#f59e0b'; // Orange for medium levels
-    return '#059669'; // Green for normal levels
-  };
-
-  // Function to test keyword detection specifically
-  const testKeywordDetection = () => {
-    if (isListening) {
-      console.log('🎯 Voice recognition is already active. Current transcript:', transcript);
-      alert(`🎯 Voice recognition is active!\n\nCurrent transcript: "${transcript}"\n\nSay "help", "emergency", or "sos" to test keyword detection.`);
-    } else {
-      console.log('🎯 Starting voice recognition for keyword detection...');
-      startVoiceRecognition();
-    }
-  };
-
-  // Toggle manual keyword listening
-  const toggleManualKeywordListening = () => {
-    if (isManualKeywordListeningEnabled) {
-      setIsManualKeywordListeningEnabled(false);
-      if (recognition) {
-        recognition.stop();
-        setIsListening(false);
-      }
-    } else {
-      setIsManualKeywordListeningEnabled(true);
-      startVoiceRecognition();
-    }
-  };
-
-  // Clear transcript
-  const clearTranscript = () => {
-    setTranscript('');
-  };
-
-  // Simulate safety monitoring for admin testing
-  const toggleSafetyMonitoring = () => {
-    setIsSafetyMonitoring(!isSafetyMonitoring);
-    if (!isSafetyMonitoring) {
-      // Start monitoring
-      setIsSafetyMonitoring(true);
-      if (isManualKeywordListeningEnabled) {
-        startVoiceRecognition();
-      }
-      // Simulate sound level monitoring
-      const soundLevelInterval = setInterval(() => {
-        if (isSafetyMonitoring) {
-          const randomLevel = Math.random() * 100;
-          setLiveSoundLevel(randomLevel);
-        } else {
-          clearInterval(soundLevelInterval);
-        }
-      }, 1000);
-    } else {
-      setIsSafetyMonitoring(false);
-      setLiveSoundLevel(null);
-    }
-  };
-
-  // Placeholder functions for disabled buttons to prevent errors
-  const checkVoiceRecognitionStatus = () => {
-    console.log('🔍 Voice recognition status check requested (function disabled)');
-    alert('This function is currently disabled and will be implemented in a future update.');
-  };
-
-  const resetSafetySystem = () => {
-    console.log('🔄 Safety system reset requested (function disabled)');
-    alert('This function is currently disabled and will be implemented in a future update.');
-  };
-
-  const reEnableSpeechRecognition = () => {
-    console.log('🎤 Re-enable speech recognition requested (function disabled)');
-    alert('This function is currently disabled and will be implemented in a future update.');
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'status-pending';
-      case 'acknowledged': return 'status-acknowledged';
-      case 'resolved': return 'status-resolved';
-      default: return 'status-pending';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <AlertTriangle size={16} />;
-      case 'acknowledged': return <Eye size={16} />;
-      case 'resolved': return <CheckCircle size={16} />;
-      default: return <AlertTriangle size={16} />;
-    }
-  };
-
   const filteredAlerts = sosAlerts.filter(alert => {
     const matchesStatus = filterStatus === 'all' || alert.status === filterStatus;
-    const matchesSearch = 
+    const matchesSearch = searchTerm === '' || 
       alert.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      alert.location_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      alert.user_message?.toLowerCase().includes(searchTerm.toLowerCase());
+      alert.alert_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      alert.location_address?.toLowerCase().includes(searchTerm.toLowerCase());
     
     return matchesStatus && matchesSearch;
   });
 
   if (!isAdmin) {
-    return (
-      <div className="admin-loading">
-        <div className="loading-spinner"></div>
-        <p>Checking admin privileges...</p>
-      </div>
-    );
+    return null;
   }
 
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
-        <div className="admin-header-content">
-          <div className="admin-title">
-            <Shield size={32} />
-            <h1>Admin Dashboard</h1>
+        <h1>🛡️ Admin Dashboard</h1>
+        <p>Monitor and manage safety alerts and system status</p>
+      </div>
+
+      {/* Dashboard Statistics */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon">
+            <AlertTriangle size={24} />
           </div>
-          <div className="admin-stats">
-            <div className="stat-item">
-              <span className="stat-number">{sosAlerts.filter(a => a.status === 'pending').length}</span>
-              <span className="stat-label">Pending</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">{sosAlerts.filter(a => a.status === 'acknowledged').length}</span>
-              <span className="stat-label">Acknowledged</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">{sosAlerts.filter(a => a.status === 'resolved').length}</span>
-              <span className="stat-label">Resolved</span>
-            </div>
+          <div className="stat-content">
+            <h3>Total Alerts</h3>
+            <p className="stat-number">{stats.totalAlerts}</p>
+          </div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-icon pending">
+            <Clock size={24} />
+          </div>
+          <div className="stat-content">
+            <h3>Pending</h3>
+            <p className="stat-number">{stats.pendingAlerts}</p>
+          </div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-icon resolved">
+            <CheckCircle size={24} />
+          </div>
+          <div className="stat-content">
+            <h3>Resolved</h3>
+            <p className="stat-number">{stats.resolvedAlerts}</p>
+          </div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-icon users">
+            <UsersIcon size={24} />
+          </div>
+          <div className="stat-content">
+            <h3>Active Users</h3>
+            <p className="stat-number">{stats.activeUsers}</p>
           </div>
         </div>
       </div>
 
-      <div className="admin-controls">
-        <div className="search-filter">
+      {/* System Status */}
+      <div className="system-status">
+        <div className="status-header">
+          <Activity size={20} />
+          <span>System Status</span>
+        </div>
+        <div className="status-indicator operational">
+          <span className="status-dot"></span>
+          {stats.systemStatus}
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="filters-section">
+        <div className="search-box">
           <input
             type="text"
-            placeholder="Search alerts..."
+            placeholder="Search alerts by user, type, or location..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="filter-select"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="acknowledged">Acknowledged</option>
-            <option value="resolved">Resolved</option>
-          </select>
         </div>
-        <button onClick={fetchSOSAlerts} className="refresh-btn">
-          Refresh
-        </button>
         
-        <button 
-          className={`test-keyword-btn ${isListening ? 'listening' : ''}`} 
-          onClick={testKeywordDetection}
-        >
-          {isListening ? '🎤 Stop Listening' : '🎯 Start Voice Recognition'}
-        </button>
-        
-        {isListening && (
-          <div className="transcript-display">
-            <p><strong>Listening for keywords:</strong> help, emergency, sos</p>
-            <p><strong>Current transcript:</strong> {transcript || 'Waiting for speech...'}</p>
-            <p className={`network-status ${networkStatus}`}>
-              <strong>Network:</strong> {networkStatus === 'online' ? '🟢 Online' : '🔴 Offline'}
-              {networkStatus === 'offline' && ' - Voice recognition may not work'}
-            </p>
-          </div>
-        )}
-        
-        {!isListening && (
-          <div className="network-info">
-            <p className={`network-status ${networkStatus}`}>
-              <strong>Network Status:</strong> {networkStatus === 'online' ? '🟢 Online' : '🔴 Offline'}
-            </p>
-            {networkStatus === 'offline' && (
-              <p className="network-warning">
-                ⚠️ Voice recognition requires an internet connection to work properly
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Enhanced Voice Testing Controls */}
-        <div className="voice-testing-controls">
-          <button 
-            className={`safety-monitoring-btn ${isSafetyMonitoring ? 'active' : ''}`}
-            onClick={toggleSafetyMonitoring}
+        <div className="status-filters">
+          <button
+            onClick={() => setFilterStatus('all')}
+            className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
           >
-            {isSafetyMonitoring ? '🛑 Stop Safety Monitoring' : '🛡️ Start Safety Monitoring'}
+            All
           </button>
-          
-          <button 
-            className={`keyword-listening-btn ${isManualKeywordListeningEnabled ? 'active' : ''}`}
-            onClick={toggleManualKeywordListening}
-            disabled={!isSafetyMonitoring}
+          <button
+            onClick={() => setFilterStatus('pending')}
+            className={`filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
           >
-            {isManualKeywordListeningEnabled ? '🛑 Stop Keyword Listening' : '🎤 Start Keyword Listening'}
+            Pending
+          </button>
+          <button
+            onClick={() => setFilterStatus('acknowledged')}
+            className={`filter-btn ${filterStatus === 'acknowledged' ? 'active' : ''}`}
+          >
+            Acknowledged
+          </button>
+          <button
+            onClick={() => setFilterStatus('resolved')}
+            className={`filter-btn ${filterStatus === 'resolved' ? 'active' : ''}`}
+          >
+            Resolved
           </button>
         </div>
-
-        {/* Enhanced Voice Testing Display */}
-        {isSafetyMonitoring && (
-          <div className="enhanced-voice-test-section">
-            <h3 className="voice-test-title">🎤 Advanced Voice Recognition Testing</h3>
-            
-            {/* Continuous Monitoring Status */}
-            <div className="monitoring-status-banner">
-              <div className="monitoring-indicator">
-                <div className="pulse-dot"></div>
-                <span>🛡️ Continuous Safety Monitoring Active</span>
-              </div>
-              <div className="monitoring-details">
-                <span>🎤 Keyword listening: {isManualKeywordListeningEnabled ? 'Active' : 'Paused'}</span>
-                <span>📊 Monitoring sound levels in real-time</span>
-                <span>📍 Admin testing mode</span>
-              </div>
-            </div>
-            
-            <div className="voice-test-container">
-              <div className="voice-status">
-                <div className="status-item">
-                  <span className="status-label">Microphone Status:</span>
-                  <span className={`status-value ${isListening ? 'active' : 'inactive'}`}>
-                    {isListening ? (
-                      <>
-                        <Mic size={16} />
-                        Active & Listening
-                      </>
-                    ) : (
-                      <>
-                        <MicOff size={16} />
-                        Inactive
-                      </>
-                    )}
-                  </span>
-                </div>
-                
-                <div className="status-item">
-                  <span className="status-label">Sound Level:</span>
-                  <span className="status-value">
-                    <Volume2 size={16} />
-                    {liveSoundLevel !== null ? (
-                      <span 
-                        className="sound-level-display"
-                        style={{ color: getSoundLevelColor(liveSoundLevel) }}
-                      >
-                        {liveSoundLevel.toFixed(1)} dB
-                      </span>
-                    ) : (
-                      <span className="sound-level-display">-- dB</span>
-                    )}
-                  </span>
-                </div>
-                
-                {liveSoundLevel !== null && (
-                  <div className="status-item">
-                    <span className="status-label">Monitoring:</span>
-                    <span className="status-value">
-                      <div className="sound-indicator">
-                        <div 
-                          className="sound-bar"
-                          style={{ 
-                            width: `${Math.min((liveSoundLevel / 100) * 100, 100)}%`,
-                            backgroundColor: getSoundLevelColor(liveSoundLevel)
-                          }}
-                        />
-                      </div>
-                      <span className="sound-label">
-                        {liveSoundLevel > 80 ? 'High' : liveSoundLevel > 60 ? 'Medium' : 'Normal'}
-                      </span>
-                    </span>
-                  </div>
-                )}
-                
-                {hasKeywordDetected && (
-                  <div className="status-item">
-                    <span className="status-label">Keyword Detected:</span>
-                    <span className="status-value keyword-detected">
-                      🎯 "help" detected!
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Transcript Display */}
-              <div className="transcript-section">
-                <div className="transcript-header">
-                  <span className="transcript-title">🎤 Live Transcript</span>
-                  <button 
-                    className="clear-transcript-btn"
-                    onClick={clearTranscript}
-                    disabled={!transcript}
-                  >
-                    🗑️ Clear
-                  </button>
-                </div>
-                <div className="transcript-content">
-                  {transcript ? (
-                    <p className="transcript-text">{transcript}</p>
-                  ) : (
-                    <p className="transcript-placeholder">Start speaking to see your transcript here...</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Disabled buttons - kept for future use */}
-        <button onClick={checkVoiceRecognitionStatus} className="status-check-btn" disabled>
-          <Shield size={16} />
-          Check Status (Disabled)
-        </button>
-        <button onClick={resetSafetySystem} className="reset-system-btn" disabled>
-          <Shield size={16} />
-          Reset System (Disabled)
-        </button>
-        <button className="re-enable-speech-btn" onClick={reEnableSpeechRecognition} disabled>
-          Re-enable Speech Recognition (Disabled)
-        </button>
-        
-
       </div>
 
-      <div className="alerts-container">
+      {/* SOS Alerts List */}
+      <div className="alerts-section">
+        <h2>🚨 Safety Alerts</h2>
+        
         {loading ? (
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
-            <p>Loading SOS alerts...</p>
-          </div>
+          <div className="loading">Loading alerts...</div>
         ) : filteredAlerts.length === 0 ? (
-          <div className="empty-state">
-            <AlertTriangle size={48} />
-            <h3>No SOS alerts found</h3>
-            <p>No alerts match your current filters.</p>
+          <div className="no-alerts">
+            <Shield size={48} />
+            <p>No alerts found</p>
           </div>
         ) : (
-          <div className="alerts-grid">
+          <div className="alerts-list">
             {filteredAlerts.map((alert) => (
-              <div key={alert.id} className={`alert-card ${getStatusColor(alert.status)}`}>
+              <div key={alert.id} className={`alert-card ${alert.status}`}>
                 <div className="alert-header">
-                  <div className="alert-status">
-                    {getStatusIcon(alert.status)}
-                    <span className="status-text">{alert.status}</span>
-                  </div>
-                  <div className="alert-time">
-                    <Clock size={14} />
-                    <span>{formatDate(alert.created_at || '')}</span>
-                  </div>
-                </div>
-
-                <div className="alert-content">
                   <div className="alert-type">
                     <AlertTriangle size={16} />
-                    <span>{alert.alert_type.replace('_', ' ').toUpperCase()}</span>
+                    {alert.alert_type?.replace(/_/g, ' ').toUpperCase()}
                   </div>
-
-                  <div className="alert-user">
-                    <User size={16} />
-                    <span>{alert.user_email || 'Unknown user'}</span>
+                  <div className="alert-status">
+                    <span className={`status-badge ${alert.status}`}>
+                      {alert.status}
+                    </span>
                   </div>
-
-                  {alert.user_phone && (
-                    <div className="alert-contact">
-                      <Phone size={16} />
-                      <span>{alert.user_phone}</span>
-                    </div>
-                  )}
-
-                  <div className="alert-location">
-                    <MapPin size={16} />
-                    <span className="location-text">{alert.location_address || 'Unknown location'}</span>
-                  </div>
-
-                  {alert.stationary_duration_minutes && (
-                    <div className="alert-duration">
-                      <Clock size={16} />
-                      <span>Stationary for {alert.stationary_duration_minutes} minutes</span>
-                    </div>
-                  )}
-
-                  {alert.user_message && (
-                    <div className="alert-message">
-                      <MessageSquare size={16} />
-                      <span>{alert.user_message}</span>
-                    </div>
-                  )}
                 </div>
-
+                
+                <div className="alert-body">
+                  <div className="alert-info">
+                    <div className="info-row">
+                      <User size={16} />
+                      <span>{alert.user_email || 'Unknown User'}</span>
+                    </div>
+                    <div className="info-row">
+                      <MapPin size={16} />
+                      <span>{alert.location_address || 'Location not available'}</span>
+                    </div>
+                    <div className="info-row">
+                      <Clock size={16} />
+                      <span>{formatDate(alert.created_at || '')}</span>
+                    </div>
+                    {alert.user_message && (
+                      <div className="info-row">
+                        <MessageSquare size={16} />
+                        <span>{alert.user_message}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
                 <div className="alert-actions">
                   <button
                     onClick={() => openMap(alert.latitude, alert.longitude)}

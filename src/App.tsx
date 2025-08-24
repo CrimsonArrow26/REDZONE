@@ -4,6 +4,7 @@ import { ZoneProvider } from './context/ZoneContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 import { AuthGuard } from './components/AuthGuard';
+import AdminRouteGuard from './components/AdminRouteGuard';
 import Home from './pages/Home';
 import News from './pages/News';
 import Events from './pages/Events';
@@ -86,7 +87,9 @@ function App() {
                   } />
                   <Route path="/admin" element={
                     <AuthGuard>
-                      <AdminDashboard />
+                      <AdminRouteGuard>
+                        <AdminDashboard />
+                      </AdminRouteGuard>
                     </AuthGuard>
                   } />
                   <Route path="/route-analyzer" element={
